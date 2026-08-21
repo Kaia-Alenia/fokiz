@@ -182,6 +182,17 @@ EN_STRINGS = {
     '⚠ Realizando corrección interna de hash...': '⚠ Performing internal hash correction...',
     '⚠ systemd --user no parece estar en ejecución. Las unidades se instalaron pero no se activarán.': "⚠ systemd --user does not seem to be running. Units installed but won't be activated.",
     '✓ fokiz.timer activo.': '✓ fokiz.timer active.',
+    
+    # Installer additions
+    "Integración de shell (opcional pero recomendada)": "Shell integration (optional but recommended)",
+    "Agrega el siguiente bloque a tu ~/.bashrc o ~/.zshrc:": "Add the following block to your ~/.bashrc or ~/.zshrc:",
+    "Esto mostrará el banner de Fokiz al abrir un terminal.": "This will show the Fokiz banner when opening a terminal.",
+    "  Fokiz — Instalador": "  Fokiz — Installer",
+    "✓ Instalación completa.": "✓ Installation complete.",
+    "Instalando fokiz.service → {path}": "Installing fokiz.service → {path}",
+    "Instalando fokiz.timer   → {path}": "Installing fokiz.timer   → {path}",
+    "✓ Wrapper configurado: {path}": "✓ Wrapper configured: {path}",
+    "  Asegúrate de que {path} esté en tu $PATH.": "  Make sure that {path} is in your $PATH.",
 }
 
 def _(key: str, **kwargs) -> str:

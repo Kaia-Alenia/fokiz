@@ -94,10 +94,10 @@ def install_systemd() -> bool:
     service_path = SYSTEMD_USER_DIR / "fokiz.service"
     timer_path = SYSTEMD_USER_DIR / "fokiz.timer"
 
-    print(_(f"Instalando fokiz.service → {service_path}"))
+    print(_("Instalando fokiz.service → {path}", path=service_path))
     service_path.write_text(SERVICE_UNIT, encoding="utf-8")
 
-    print(_(f"Instalando fokiz.timer   → {timer_path}"))
+    print(_("Instalando fokiz.timer   → {path}", path=timer_path))
     timer_path.write_text(TIMER_UNIT, encoding="utf-8")
 
     # Check if systemd --user is running
@@ -125,13 +125,13 @@ def install_systemd() -> bool:
 def print_shell_hook_instructions() -> None:
     print()
     print("─" * 60)
-    print("Integración de shell (opcional pero recomendada)")
+    print(_("Integración de shell (opcional pero recomendada)"))
     print("─" * 60)
-    print("Agrega el siguiente bloque a tu ~/.bashrc o ~/.zshrc:")
+    print(_("Agrega el siguiente bloque a tu ~/.bashrc o ~/.zshrc:"))
     print()
     print(HOOK_BLOCK)
     print("─" * 60)
-    print("Esto mostrará el banner de Fokiz al abrir un terminal.")
+    print(_("Esto mostrará el banner de Fokiz al abrir un terminal."))
 
 
 def install_cli_entrypoint() -> None:
@@ -148,14 +148,14 @@ def install_cli_entrypoint() -> None:
 
     script.write_text(content, encoding="utf-8")
     script.chmod(0o755)
-    print(_(f"✓ Wrapper configurado: {script}"))
+    print(_("✓ Wrapper configurado: {path}", path=script))
     if not script.exists(): # solo por si acaso
-        print(_(f"  Asegúrate de que {local_bin} esté en tu $PATH."))
+        print(_("  Asegúrate de que {path} esté en tu $PATH.", path=local_bin))
 
 
 def main() -> int:
     print("═" * 60)
-    print("  Fokiz — Instalador")
+    print(_("  Fokiz — Instalador"))
     print("═" * 60)
 
     ok = install_systemd()
@@ -164,7 +164,7 @@ def main() -> int:
 
     if ok:
         print()
-        print("✓ Instalación completa.")
+        print(_("✓ Instalación completa."))
         print(_("  Comprueba el estado con: systemctl --user status fokiz.timer"))
     else:
         print()
