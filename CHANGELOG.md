@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-08-21
+### Added
+- Multi-language support (English and Spanish) via `i18n.py`.
+
+### Changed
+- Translated all residual Spanish code comments to English.
+- Re-architected `install.sh` and `install.py` to fix installation bugs (`git fetch` logic and Python imports).
 ## [0.2.0] - 2026-08-21
 ### Added
 - GitHub update checker in `updater.py` that alerts on `fokiz status` if a new version is available.
