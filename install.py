@@ -149,7 +149,7 @@ def install_cli_entrypoint() -> None:
     script.write_text(content, encoding="utf-8")
     script.chmod(0o755)
     print(_("✓ Wrapper configurado: {path}", path=script))
-    if not script.exists(): # solo por si acaso
+    if not script.exists(): # just in case
         print(_("  Asegúrate de que {path} esté en tu $PATH.", path=local_bin))
 
 

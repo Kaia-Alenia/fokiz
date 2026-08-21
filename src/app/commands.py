@@ -615,7 +615,7 @@ def cmd_done(task_id: int) -> int:
     t_phase_dl = _parse_utc(active_phase["target_deadline"])
     tau = compute_tau(now, t_start, t_phase_dl)
 
-    # Solicitar bitácora
+    # Request journal log
     print()
     log_text = ui.prompt_multiline(_("Bitácora de la fase — ¿qué hiciste exactamente?"))
 

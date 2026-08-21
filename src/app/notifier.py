@@ -74,7 +74,7 @@ def send_notification(
         "--expire-time", str(timeout_ms),
     ]
 
-    # Agregamos el ícono si existe
+    # Add icon if it exists
     from .constants import ICON_PATH
     if ICON_PATH.exists():
         args.extend(["--icon", str(ICON_PATH)])
