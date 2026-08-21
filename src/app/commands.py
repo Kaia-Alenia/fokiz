@@ -548,6 +548,16 @@ def cmd_status(show_banner: bool = False) -> int:
         )
         print(card)
 
+    try:
+        from .updater import check_for_updates
+        latest_version = check_for_updates()
+        if latest_version:
+            print(f"\n\033[93m[i] Nueva versión de Fokiz disponible ({latest_version}).\033[0m")
+            print("    Actualiza ejecutando:")
+            print("    curl -sSL https://raw.githubusercontent.com/Kaia-Alenia/fokiz/main/install.sh | bash\n")
+    except Exception:
+        pass
+
     return 0
 
 
