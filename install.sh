@@ -29,11 +29,16 @@ fi
 
 # 2. Clone or update repository
 echo "[2/4] Fetching Fokiz from GitHub..."
-if [ -d "$INSTALL_DIR" ]; then
+if [ -d "$INSTALL_DIR/.git" ]; then
     echo "  -> Directory $INSTALL_DIR already exists. Updating..."
     cd "$INSTALL_DIR"
     git fetch origin main
     git reset --hard origin/main
+elif [ -d "$INSTALL_DIR" ]; then
+    echo "  -> Directory $INSTALL_DIR exists but is not a git repository. Re-cloning..."
+    rm -rf "$INSTALL_DIR"
+    git clone "$REPO_URL" "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
 else
     echo "  -> Cloning to $INSTALL_DIR..."
     git clone "$REPO_URL" "$INSTALL_DIR"

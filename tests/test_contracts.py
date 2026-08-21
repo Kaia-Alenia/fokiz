@@ -138,7 +138,7 @@ class TestPhaseSchedulingInvariant(unittest.TestCase):
 
         self.t0 = datetime(2025, 1, 1, 0, 0, 0, tzinfo=timezone.utc)
         
-        # 1. Crear el contrato lógico
+        # 1. Create the logical contract
         contract = build_contract(
             title="Tarea de prueba de scheduling",
             objective="Verificar que las deadlines de fase no se desplazan",
@@ -151,7 +151,7 @@ class TestPhaseSchedulingInvariant(unittest.TestCase):
             created_at=self.t0,
         )
         
-        # 2. Persistir en DB como hace commands.py
+        # 2. Persist in DB as commands.py does
         integrity_hash = "dummy_hash"
         
         self.task_id = db.insert_task(
@@ -211,7 +211,7 @@ class TestPhaseSchedulingInvariant(unittest.TestCase):
             path=self.db_path
         )
         
-        # Releer fase 2 DESPUÉS de la finalización tardía de fase 1
+        # Reread phase 2 AFTER the late completion of phase 1
         phases_after = db.get_phases(self.task_id, path=self.db_path)
         phase_2_after = next(p for p in phases_after if p["phase_number"] == 2)
         deadline_after = phase_2_after["target_deadline"]
@@ -219,10 +219,10 @@ class TestPhaseSchedulingInvariant(unittest.TestCase):
         self.assertEqual(
             deadline_after,
             self.expected_phase_2_deadline,
-            "BUG: la deadline de fase 2 se movió tras completar fase 1 tarde. Las ventanas temporales deben ser fijas."
+            "BUG: Phase 2 deadline moved after completing phase 1 late. Time windows must be fixed."
         )
         
-        # Además: la tarea completa (task.deadline) tampoco debe moverse
+        # Furthermore: the entire task (task.deadline) must not move either
         task_row = db.get_task(self.task_id, path=self.db_path)
         self.assertEqual(
             task_row["deadline"],

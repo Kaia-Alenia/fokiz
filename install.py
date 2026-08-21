@@ -39,7 +39,7 @@ MONITOR_PATH = SCRIPT_DIR / "src" / "monitor.py"
 
 SERVICE_UNIT = dedent(f"""\
     [Unit]
-    Description=Fokiz — Monitor episódico del Contrato de Ulises
+    Description=Fokiz — Episodic Monitor for Ulysses Contract
     Documentation=https://github.com/aleniastudios/fokiz
     After=network.target
 
@@ -54,7 +54,7 @@ SERVICE_UNIT = dedent(f"""\
 
 TIMER_UNIT = dedent("""\
     [Unit]
-    Description=Fokiz — Timer episódico (60s)
+    Description=Fokiz — Episodic Timer (60s)
     After=graphical-session.target
 
     [Timer]
@@ -84,7 +84,7 @@ HOOK_BLOCK = dedent("""\
 def _run(cmd: list[str]) -> int:
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(_(f"  ⚠ Error: {result.stderr.strip()}"), file=sys.stderr)
+        print(_("  ⚠ Error: {err}", err=result.stderr.strip()), file=sys.stderr)
     return result.returncode
 
 
@@ -94,30 +94,30 @@ def install_systemd() -> bool:
     service_path = SYSTEMD_USER_DIR / "fokiz.service"
     timer_path = SYSTEMD_USER_DIR / "fokiz.timer"
 
-    print(_("Instalando fokiz.service → {path}", path=service_path))
+    print(_("Installing fokiz.service → {path}", path=service_path))
     service_path.write_text(SERVICE_UNIT, encoding="utf-8")
 
-    print(_("Instalando fokiz.timer   → {path}", path=timer_path))
+    print(_("Installing fokiz.timer   → {path}", path=timer_path))
     timer_path.write_text(TIMER_UNIT, encoding="utf-8")
 
     # Check if systemd --user is running
     if _run(["systemctl", "--user", "is-system-running", "--quiet"]) not in (0, 1):
-        print(_("⚠ systemd --user no parece estar en ejecución. Las unidades se instalaron pero no se activarán."))
+        print(_("⚠ systemd --user does not seem to be running. Units installed but won't be activated."))
         return False
 
-    print(_("Recargando daemon de systemd --user…"))
+    print(_("Reloading systemd --user daemon..."))
     _run(["systemctl", "--user", "daemon-reload"])
 
-    print(_("Habilitando fokiz.timer…"))
+    print(_("Enabling fokiz.timer..."))
     _run(["systemctl", "--user", "enable", "fokiz.timer"])
 
-    print(_("Iniciando fokiz.timer…"))
+    print(_("Starting fokiz.timer..."))
     rc = _run(["systemctl", "--user", "start", "fokiz.timer"])
 
     if rc == 0:
-        print(_("✓ fokiz.timer activo."))
+        print(_("✓ fokiz.timer active."))
     else:
-        print(_("⚠ No se pudo iniciar fokiz.timer. Revisa: journalctl --user -u fokiz.timer"))
+        print(_("⚠ Could not start fokiz.timer. Check: journalctl --user -u fokiz.timer"))
         return False
     return True
 
@@ -125,13 +125,13 @@ def install_systemd() -> bool:
 def print_shell_hook_instructions() -> None:
     print()
     print("─" * 60)
-    print(_("Integración de shell (opcional pero recomendada)"))
+    print(_("Shell integration (optional but recommended)"))
     print("─" * 60)
-    print(_("Agrega el siguiente bloque a tu ~/.bashrc o ~/.zshrc:"))
+    print(_("Add the following block to your ~/.bashrc or ~/.zshrc:"))
     print()
     print(HOOK_BLOCK)
     print("─" * 60)
-    print(_("Esto mostrará el banner de Fokiz al abrir un terminal."))
+    print(_("This will show the Fokiz banner when opening a terminal."))
 
 
 def install_cli_entrypoint() -> None:
@@ -148,14 +148,14 @@ def install_cli_entrypoint() -> None:
 
     script.write_text(content, encoding="utf-8")
     script.chmod(0o755)
-    print(_("✓ Wrapper configurado: {path}", path=script))
+    print(_("✓ Wrapper configured: {path}", path=script))
     if not script.exists(): # just in case
-        print(_("  Asegúrate de que {path} esté en tu $PATH.", path=local_bin))
+        print(_("  Make sure that {path} is in your $PATH.", path=local_bin))
 
 
 def main() -> int:
     print("═" * 60)
-    print(_("  Fokiz — Instalador"))
+    print(_("  Fokiz — Installer"))
     print("═" * 60)
 
     ok = install_systemd()
@@ -164,11 +164,11 @@ def main() -> int:
 
     if ok:
         print()
-        print(_("✓ Instalación completa."))
-        print(_("  Comprueba el estado con: systemctl --user status fokiz.timer"))
+        print(_("✓ Installation complete."))
+        print(_("  Check status with: systemctl --user status fokiz.timer"))
     else:
         print()
-        print(_("⚠ Instalación parcial. Revisa los mensajes anteriores."))
+        print(_("⚠ Partial installation. Check the messages above."))
 
     return 0 if ok else 1
 
