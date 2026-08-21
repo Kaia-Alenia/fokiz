@@ -1,0 +1,12 @@
+[Unit]
+Description=Fokiz — Monitor episódico del Contrato de Ulises
+Documentation=https://github.com/aleniastudios/fokiz
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 %h/.local/share/fokiz/src/monitor.py
+WorkingDirectory=%h/.local/share/fokiz
+Environment=PYTHONUNBUFFERED=1
+StandardOutput=journal
+StandardError=journal
