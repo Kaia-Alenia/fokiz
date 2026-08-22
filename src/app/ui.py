@@ -70,7 +70,7 @@ def render_progress_bar(ratio: float, width: int = PROGRESS_BAR_WIDTH, zone: Zon
 # Banner
 # ---------------------------------------------------------------------------
 
-def render_banner(size: str = "LARGE") -> str:
+def render_banner(size: str = "LARGE", width: int = BANNER_WIDTH) -> str:
     if size == "NONE":
         return ""
         
@@ -95,11 +95,24 @@ def render_banner(size: str = "LARGE") -> str:
 """
 
     logo = logo_large if size == "LARGE" else logo_small
+    
+    # Center each line of the logo if a custom width is provided
+    logo_lines = []
+    for line in logo.strip('\n').split('\n'):
+        visible_len = len(line)
+        if visible_len < width:
+            pad = (width - visible_len) // 2
+            logo_lines.append(" " * pad + line)
+        else:
+            logo_lines.append(line)
+    
+    centered_logo = "\n".join(logo_lines)
 
-    top = "┌" + "─" * (BANNER_WIDTH - 2) + "┐"
-    mid = f"│{bold}{cyan}{'FOKIZ':^{BANNER_WIDTH - 2}}{reset}│"
-    bot = "└" + "─" * (BANNER_WIDTH - 2) + "┘"
-    return f"{logo.strip('\n')}\n{top}\n{mid}\n{bot}"
+    top = "┌" + "─" * (width - 2) + "┐"
+    mid = f"│{bold}{cyan}{'FOKIZ':^{width - 2}}{reset}│"
+    bot = "└" + "─" * (width - 2) + "┘"
+    return f"{centered_logo}\n{top}\n{mid}\n{bot}"
+
 
 
 # ---------------------------------------------------------------------------
@@ -288,9 +301,15 @@ def render_board(active_tasks: list[str], completed_tasks: list[str]) -> str:
         return text + " " * padding
         
     COL_WIDTH = 55
+    TOTAL_WIDTH = COL_WIDTH * 2 + 1
+    
     out = []
-    out.append(render_banner(size="LARGE"))
-    out.append(f"{c_bold}{c_orange}{'EN PROGRESO':^{COL_WIDTH}}{c_reset}│{c_bold}{c_green}{'COMPLETADO':^{COL_WIDTH}}{c_reset}")
+    out.append(render_banner(size="LARGE", width=TOTAL_WIDTH))
+    
+    # Center text manually to avoid ANSI escape sequences interfering with format alignments
+    hdr_left = "EN PROGRESO".center(COL_WIDTH)
+    hdr_right = "COMPLETADO".center(COL_WIDTH)
+    out.append(f"{c_bold}{c_orange}{hdr_left}{c_reset}│{c_bold}{c_green}{hdr_right}{c_reset}")
     out.append("─" * COL_WIDTH + "┼" + "─" * COL_WIDTH)
     
     # Split task cards into lines
@@ -311,7 +330,8 @@ def render_board(active_tasks: list[str], completed_tasks: list[str]) -> str:
             
             out.append(f"{_pad(l_act, COL_WIDTH)}│{_pad(l_cmp, COL_WIDTH)}")
             
-        out.append(" " * COL_WIDTH + "│" + " " * COL_WIDTH)
+        if i < max_idx - 1:
+            out.append(" " * COL_WIDTH + "│" + " " * COL_WIDTH)
         
     return "\n".join(out)
 
