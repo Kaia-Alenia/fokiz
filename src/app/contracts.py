@@ -42,6 +42,7 @@ from .constants import (
     DEFAULT_TIMEZONE,
 )
 from .errors import ValidationError
+from .i18n import _
 
 
 # ---------------------------------------------------------------------------
@@ -74,8 +75,7 @@ def validate_title(title: str) -> str:
     title = title.strip()
     if len(title) < TITLE_MIN or len(title) > TITLE_MAX:
         raise ValidationError(
-            f"Title must be between {TITLE_MIN} and {TITLE_MAX} characters "
-            f"(got {len(title)})."
+            _("contract.val_title_len", min_len=TITLE_MIN, max_len=TITLE_MAX, actual=len(title))
         )
     return title
 
@@ -84,29 +84,28 @@ def validate_objective(objective: str) -> str:
     objective = objective.strip()
     if len(objective) < OBJECTIVE_MIN or len(objective) > OBJECTIVE_MAX:
         raise ValidationError(
-            f"Objective must be between {OBJECTIVE_MIN} and {OBJECTIVE_MAX} characters "
-            f"(got {len(objective)})."
+            _("contract.val_obj_len", min_len=OBJECTIVE_MIN, max_len=OBJECTIVE_MAX, actual=len(objective))
         )
     return objective
 
 
 def validate_total_days(days: int) -> int:
     if days < DAYS_MIN:
-        raise ValidationError(f"Total days must be >= {DAYS_MIN}.")
+        raise ValidationError(_("contract.val_days_min", min_days=DAYS_MIN))
     return days
 
 
 def validate_total_phases(phases: int) -> int:
     if phases < PHASES_MIN or phases > PHASES_MAX:
         raise ValidationError(
-            f"Phase count must be between {PHASES_MIN} and {PHASES_MAX}."
+            _("contract.val_phases_range", min_phases=PHASES_MIN, max_phases=PHASES_MAX)
         )
     return phases
 
 
 def validate_phase_days(days: int, phase_num: int) -> int:
     if days <= 0:
-        raise ValidationError(f"Phase {phase_num} days must be > 0.")
+        raise ValidationError(_("contract.val_phase_days_min", phase=phase_num))
     return days
 
 
@@ -114,7 +113,7 @@ def validate_phase_days_sum(phase_days: list[int], total_days: int) -> None:
     total = sum(phase_days)
     if total != total_days:
         raise ValidationError(
-            f"Sum of phase days ({total}) must equal total_days ({total_days})."
+            _("contract.val_phase_days_sum", sum_days=total, total=total_days)
         )
 
 
@@ -226,11 +225,7 @@ def validate_iana_timezone(tz_str: str) -> ZoneInfo:
     try:
         return ZoneInfo(tz_str)
     except (ZoneInfoNotFoundError, KeyError):
-        raise ValidationError(
-            f"Timezone '{tz_str}' not recognized. "
-            "Use a valid IANA identifier like 'America/Mexico_City', "
-            "'Europe/Madrid', 'Asia/Tokyo', etc."
-        )
+        raise ValidationError(_("contract.val_tz_unknown", tz=tz_str))
 
 
 # ---------------------------------------------------------------------------
@@ -276,7 +271,7 @@ def build_contract(
 
     if len(phase_inputs) != total_phases:
         raise ValidationError(
-            f"Expected {total_phases} phases, got {len(phase_inputs)}."
+            _("contract.val_phases_expected", expected=total_phases, actual=len(phase_inputs))
         )
 
     # Validate phase days
@@ -314,9 +309,9 @@ def build_contract(
         ph_instructions = ph_input["instructions"].strip()
 
         if not ph_title:
-            raise ValidationError(f"Phase {i} title cannot be empty.")
+            raise ValidationError(_("contract.val_phase_title_empty", i=i))
         if not ph_instructions:
-            raise ValidationError(f"Phase {i} instructions cannot be empty.")
+            raise ValidationError(_("contract.val_phase_instructions_empty", i=i))
 
         # Last calendar day of this phase
         last_day_of_phase = phase_cursor_date + timedelta(days=days - 1)

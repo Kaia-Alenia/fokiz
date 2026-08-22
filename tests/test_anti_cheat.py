@@ -11,9 +11,11 @@ sys.path.insert(0, str(pathlib.Path(__file__).parent.parent / "src"))
 
 from app.anti_cheat import validate_completion_log, validate_early_confirm_phrase
 from app.errors import AntiCheatError, EarlyCompletionError
+from app.i18n import set_language
 
+set_language("en")
 
-VALID_INSTRUCTIONS = "Implementar el módulo de autenticación con JWT y pruebas unitarias"
+VALID_INSTRUCTIONS = "Implement the authentication module with JWT and unit tests"
 
 
 class TestGarbageRejection(unittest.TestCase):
@@ -45,9 +47,9 @@ class TestEntropyCheck(unittest.TestCase):
 
     def test_normal_text_passes(self):
         good_log = (
-            "Completé la implementación del módulo de autenticación. "
-            "Las pruebas unitarias pasan con cobertura del 85%. "
-            "Documenté los endpoints de JWT."
+            "I completed the implementation of the authentication module. "
+            "The unit tests pass with 85% coverage. "
+            "I documented the JWT endpoints."
         )
         # Should not raise
         validate_completion_log(good_log, VALID_INSTRUCTIONS, tau=0.5)
@@ -56,17 +58,17 @@ class TestEntropyCheck(unittest.TestCase):
 class TestLexicalOverlap(unittest.TestCase):
     def test_unrelated_text_rejected(self):
         unrelated = (
-            "Fui al supermercado y compré pan. Después vi la televisión "
-            "y luego dormí una siesta larga. La película estuvo buena."
+            "Cats sleep all day. They eat fish from a small bowl. "
+            "Sometimes birds fly outside."
         )
         with self.assertRaises(AntiCheatError):
             validate_completion_log(unrelated, VALID_INSTRUCTIONS, tau=0.5)
 
     def test_related_text_passes(self):
         related = (
-            "Implementé la autenticación usando JWT. "
-            "Escribí pruebas unitarias para el módulo. "
-            "El código funciona correctamente."
+            "I implemented authentication using JWT. "
+            "I wrote unit tests for the module. "
+            "The code works correctly."
         )
         validate_completion_log(related, VALID_INSTRUCTIONS, tau=0.5)
 
@@ -74,24 +76,24 @@ class TestLexicalOverlap(unittest.TestCase):
 class TestEarlyCompletion(unittest.TestCase):
     def test_early_without_phrase_rejected(self):
         good_log = (
-            "Implementé el módulo de autenticación con JWT y pruebas unitarias "
-            "en tiempo récord. Todo funciona."
+            "I implemented the authentication module with JWT and unit tests "
+            "in record time. Everything works."
         )
         with self.assertRaises(EarlyCompletionError):
             validate_completion_log(good_log, VALID_INSTRUCTIONS, tau=0.05)
 
     def test_early_with_phrase_passes(self):
         good_log = (
-            "confirmo que termine antes de tiempo. "
-            "Implementé el módulo de autenticación con JWT y pruebas unitarias. "
-            "Todo está documentado."
+            "i confirm i finished early. "
+            "I implemented the authentication module with JWT and unit tests. "
+            "Everything is documented."
         )
         validate_completion_log(good_log, VALID_INSTRUCTIONS, tau=0.05)
 
     def test_normal_tau_no_phrase_required(self):
         good_log = (
-            "Implementé el módulo de autenticación con JWT. "
-            "Las pruebas unitarias pasan correctamente."
+            "I implemented the authentication module with JWT. "
+            "The unit tests pass correctly."
         )
         # tau=0.5 → no early check required
         validate_completion_log(good_log, VALID_INSTRUCTIONS, tau=0.5)
@@ -100,20 +102,28 @@ class TestEarlyCompletion(unittest.TestCase):
 class TestEarlyConfirmPhrase(unittest.TestCase):
     def test_exact_phrase(self):
         self.assertTrue(
-            validate_early_confirm_phrase("confirmo que termine antes de tiempo")
+            validate_early_confirm_phrase("i confirm i finished early")
         )
 
     def test_phrase_in_larger_text(self):
         self.assertTrue(
             validate_early_confirm_phrase(
-                "confirmo que termine antes de tiempo, todo está completo"
+                "i confirm i finished early, everything is complete"
             )
         )
 
     def test_wrong_phrase(self):
         self.assertFalse(
-            validate_early_confirm_phrase("creo que ya terminé")
+            validate_early_confirm_phrase("i think i am done")
         )
+
+    def test_spanish_phrase(self):
+        set_language("es")
+        self.assertTrue(
+            validate_early_confirm_phrase("confirmo que termine antes de tiempo")
+        )
+        set_language("en")  # restore
+
 
 
 if __name__ == "__main__":

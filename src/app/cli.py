@@ -13,7 +13,8 @@ import sys
 import logging
 from .errors import FokizError, NotInitializedError
 from . import ui
-from .i18n import _
+from .config import load_config
+from .i18n import _, set_language
 
 
 def _setup_logging() -> None:
@@ -29,6 +30,12 @@ def _usage() -> None:
 
 def main() -> int:
     _setup_logging()
+    
+    try:
+        conf = load_config()
+        set_language(conf.get("language", "en"))
+    except Exception:
+        pass
 
     args = sys.argv[1:]
 

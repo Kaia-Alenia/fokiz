@@ -12,27 +12,7 @@ RULES:
 
 from __future__ import annotations
 
-import json
-import os
-
-# ---------------------------------------------------------------------------
-# Language resolution
-# ---------------------------------------------------------------------------
-
-_lang_file = os.path.join(
-    os.path.expanduser("~"), ".local", "share", "fokiz", "config.json"
-)
-
 CURRENT_LANG: str = "en"  # safe default
-
-try:
-    if os.path.exists(_lang_file):
-        with open(_lang_file, "r", encoding="utf-8") as _f:
-            _data = json.load(_f)
-            if isinstance(_data, dict) and _data.get("language") in ("en", "es"):
-                CURRENT_LANG = _data["language"]
-except Exception:
-    pass
 
 
 def set_language(lang: str) -> None:
@@ -67,12 +47,26 @@ ES_STRINGS: dict[str, str] = {
     "contract.field_objective": "  Objetivo  : {objective}",
     "contract.field_days": "  Días      : {days}",
     "contract.field_phases": "  Fases     : {phases}",
+    "contract.field_created": "  Creado    : {created_at}",
     "contract.field_deadline": "  Deadline  : {deadline}",
     "contract.phase_row": "  Fase {phase_number}: {title} → {target_deadline} ({days}d)",
+    "contract.val_title_len": "El título debe tener entre {min_len} y {max_len} caracteres (tiene {actual}).",
+    "contract.val_obj_len": "El objetivo debe tener entre {min_len} y {max_len} caracteres (tiene {actual}).",
+    "contract.val_days_min": "Los días totales deben ser >= {min_days}.",
+    "contract.val_phases_range": "El número de fases debe estar entre {min_phases} y {max_phases}.",
+    "contract.val_phase_days_min": "Los días de la fase {phase} deben ser > 0.",
+    "contract.val_phase_days_sum": "La suma de los días de las fases ({sum_days}) debe ser igual a los días totales ({total}).",
+    "contract.val_tz_unknown": "Zona horaria '{tz}' no reconocida. Usa un identificador IANA válido como 'America/Mexico_City', 'Europe/Madrid', 'Asia/Tokyo', etc.",
+    "contract.val_phases_expected": "Se esperaban {expected} fases, se recibieron {actual}.",
+    "contract.val_phase_title_empty": "El título de la fase {i} no puede estar vacío.",
+    "contract.val_phase_instructions_empty": "Las instrucciones de la fase {i} no pueden estar vacías.",
     "contract.slots_full": "Slots activos llenos ({active_count}/{max_slots}). Completa o ríndete primero.",
+    "contract.hmac_verification_failed": "Verificación HMAC inmediata falló: {status}",
 
     # --- Done ---
     "done.phase_section": "Fase #{phase_number} — {title}",
+    "done.field_instructions": "  Instrucciones: {instructions}",
+    "done.field_deadline": "  Deadline     : {deadline}",
     "done.log_prompt": "Bitácora de la fase — ¿qué hiciste exactamente?",
     "done.confirm_prompt": "¿Confirmas la fase #{phase_number} como COMPLETADA?",
     "done.phase_completed": "Fase #{phase_number} completada.",
@@ -93,39 +87,50 @@ ES_STRINGS: dict[str, str] = {
     # --- Init ---
     "init.title": "FOKIZ INIT",
     "init.nickname_prompt": "Ingresa tu nombre o apodo",
-    "init.name_empty": "El nombre no puede estar vacío.",
-    "init.timezone_prompt": "Zona horaria IANA (ej. America/Mexico_City)",
-    "init.timezone_detected": "Zona horaria detectada:",
-    "init.timezone_use_detected": "¿Usar esta zona horaria?",
-    "init.timezone_detection_failed": "No se pudo detectar la zona horaria del sistema.",
-    "init.xfce_notifications_updated": "Configuración de notificaciones de XFCE actualizada (historial activado).",
-    "init.directories_created": "Directorios creados.",
-    "init.secret_generated": ".secret generado.",
-    "init.secret_preserved": ".secret ya existe — preservado.",
-    "init.secret_integrity_broken": ".secret no encontrado pero data.db existe. Integridad comprometida. Recupera manualmente.",
+    "init.name_empty": "El nickname no puede estar vacío.",
+    "init.timezone_prompt": "Fallo al detectar IANA timezone automáticamente.\nIngresa un timezone válido (ej. America/Mexico_City): ",
+    "init.timezone_invalid": "'{tz}' no es un identificador IANA válido. Ejemplos: America/Mexico_City, Europe/Madrid, Asia/Tokyo.",
+    "init.timezone_detected": "Timezone detectado: {tz}",
+    "init.timezone_use_detected": "¿Usar este timezone?",
+    "init.timezone_detection_failed": "No se pudo detectar el timezone automáticamente.",
+    "init.xfce_notifications_updated": "Configuración de notificaciones XFCE actualizada para modo estricto.",
+    "init.directories_created": "Directorios base creados.",
+    "init.secret_generated": "Nuevo secreto maestro generado.",
+    "init.secret_preserved": "Secreto maestro detectado y preservado.",
+    "init.secret_integrity_broken": "Fallo de integridad: no se pudo leer o escribir el archivo secreto (verificar permisos).",
     "init.db_initialized": "Base de datos SQLite inicializada.",
-    "init.config_saved": "Configuración guardada (nick: {nickname}, tz: {tz}).",
-    "init.complete": "Instalación completa",
-    "init.ready": "Fokiz está listo. Usa 'fokiz add' para crear tu primer contrato.",
-    "init.linux_required": "Fokiz requiere Linux.",
-    "init.python_required": "Se requiere Python >= 3.8.",
+    "init.config_saved": "Configuración guardada (Nickname: {nickname} | TZ: {tz}).",
+    "init.complete": "Instalación Completada",
+    "init.ready": "Fokiz está listo. Usa 'fokiz add' para crear un nuevo contrato.",
+    "init.linux_required": "Fokiz actualmente sólo soporta Linux.",
+    "init.python_required": "Fokiz requiere Python 3.10 o superior.",
     "init.systemd_daemon_reload": "Recargando daemon de systemd --user…",
     "init.systemd_enabling": "Habilitando fokiz.timer…",
     "init.systemd_starting": "Iniciando fokiz.timer…",
     "init.systemd_active": "✓ fokiz.timer activo.",
-    "init.systemd_units_installed": "Unidades systemd instaladas.",
-    "init.systemd_not_running": "systemd --user no disponible. Las notificaciones automáticas no funcionarán.",
-    "init.systemd_timer_failed": "⚠ No se pudo iniciar fokiz.timer. Revisa: journalctl --user -u fokiz.timer",
+    "init.systemd_units_installed": "Unidades de Systemd (service, timer) generadas.",
+    "init.systemd_not_running": "systemd daemon no está corriendo. El demonio de Fokiz no podrá autoiniciarse.",
+    "init.systemd_timer_failed": "Fallo al activar el timer systemd. El daemon no se iniciará automáticamente.",
     "init.systemd_not_activated": "⚠ systemd --user no parece estar en ejecución. Las unidades se instalaron pero no se activarán.",
     "init.partial": "⚠ Instalación parcial. Revisa los mensajes anteriores.",
     "init.success": "¡Fokiz inicializado correctamente! Estructuras de inmutabilidad creadas.",
     "init.already_initialized": "Fokiz ya está inicializado.",
-    "init.hmac_verified": "HMAC verificado correctamente.",
+    "init.hmac_verified": "Firma de contrato verificada y preservada.",
     "init.hash_correction": "⚠ Realizando corrección interna de hash...",
+    "init.hook_installed": "Hook inyectado en {file}.",
+    "init.hook_already_present": "Hook de Fokiz ya detectado en {file}.",
+    "init.systemd_timer_activated": "Systemd timer activado (fokiz-monitor.timer).",
+    "init.diag_not_found": "{name} — no encontrado",
+    "init.dep_notifications": "notificaciones de escritorio",
+    "init.dep_presence": "detección de presencia (opcional)",
+    "init.dep_found": "{dep} — {desc}",
+    "init.dep_missing": "{dep} no encontrado — {desc}",
 
     # --- Status ---
     "status.title": "Diagnóstico",
     "status.timezone": "Zona horaria",
+    "status.local_time": "  Hora local : {time}",
+    "status.timezone_field": "  Zona horaria: {tz}",
     "status.no_active": "No hay ningún contrato activo en este momento.",
     "status.no_tasks": "No hay tareas registradas.",
     "status.new_version": "\n\033[93m[i] Nueva versión de Fokiz disponible ({latest_version}).\033[0m",
@@ -189,6 +194,14 @@ ES_STRINGS: dict[str, str] = {
     "error.early_completion": "Completaste esta fase demasiado pronto. Confirma explícitamente que realmente la terminaste.",
     "error.dependency_missing": "Dependencia faltante: {dep}",
     "error.presence_detection": "No se pudo detectar la presencia del usuario.",
+
+    # --- Anti-cheat ---
+    "anti_cheat.garbage": "Contenido de relleno detectado.",
+    "anti_cheat.keyboard_pattern": "Patrón de teclado detectado.",
+    "anti_cheat.low_entropy": "Entropía demasiado baja ({entropy:.2f} bits). El texto parece repetitivo o sin información.",
+    "anti_cheat.too_short": "Bitácora muy corta ({length} caracteres). Mínimo requerido: {min_chars}.",
+    "anti_cheat.no_overlap": "La bitácora no parece relacionada con las instrucciones de la fase. Incluye al menos un término del trabajo realizado.",
+    "anti_cheat.early_confirm_phrase": "confirmo que termine antes de tiempo",
 
     # --- UI prompts ---
     "ui.int_minimum": "Ingresa un número entero (mínimo {minimum}).",
@@ -311,12 +324,26 @@ EN_STRINGS: dict[str, str] = {
     "contract.field_objective": "  Objective : {objective}",
     "contract.field_days": "  Days      : {days}",
     "contract.field_phases": "  Phases    : {phases}",
+    "contract.field_created": "  Created   : {created_at}",
     "contract.field_deadline": "  Deadline  : {deadline}",
     "contract.phase_row": "  Phase {phase_number}: {title} → {target_deadline} ({days}d)",
+    "contract.val_title_len": "Title must be between {min_len} and {max_len} characters (got {actual}).",
+    "contract.val_obj_len": "Objective must be between {min_len} and {max_len} characters (got {actual}).",
+    "contract.val_days_min": "Total days must be >= {min_days}.",
+    "contract.val_phases_range": "Phase count must be between {min_phases} and {max_phases}.",
+    "contract.val_phase_days_min": "Phase {phase} days must be > 0.",
+    "contract.val_phase_days_sum": "Sum of phase days ({sum_days}) must equal total_days ({total}).",
+    "contract.val_tz_unknown": "Timezone '{tz}' not recognized. Use a valid IANA identifier like 'America/Mexico_City', 'Europe/Madrid', 'Asia/Tokyo', etc.",
+    "contract.val_phases_expected": "Expected {expected} phases, got {actual}.",
+    "contract.val_phase_title_empty": "Phase {i} title cannot be empty.",
+    "contract.val_phase_instructions_empty": "Phase {i} instructions cannot be empty.",
     "contract.slots_full": "Active slots full ({active_count}/{max_slots}). Complete or surrender first.",
+    "contract.hmac_verification_failed": "Immediate HMAC verification failed: {status}",
 
     # --- Done ---
     "done.phase_section": "Phase #{phase_number} — {title}",
+    "done.field_instructions": "  Instructions : {instructions}",
+    "done.field_deadline": "  Deadline     : {deadline}",
     "done.log_prompt": "Phase log — what did you do exactly?",
     "done.confirm_prompt": "Confirm phase #{phase_number} as COMPLETED?",
     "done.phase_completed": "Phase #{phase_number} completed.",
@@ -337,22 +364,23 @@ EN_STRINGS: dict[str, str] = {
     # --- Init ---
     "init.title": "FOKIZ INIT",
     "init.nickname_prompt": "Enter your name or nickname",
-    "init.name_empty": "Name cannot be empty.",
-    "init.timezone_prompt": "IANA timezone (e.g. America/Mexico_City)",
-    "init.timezone_detected": "Detected timezone:",
+    "init.name_empty": "Nickname cannot be empty.",
+    "init.timezone_prompt": "Failed to auto-detect IANA timezone.\nEnter a valid timezone (e.g. America/New_York): ",
+    "init.timezone_invalid": "'{tz}' is not a valid IANA identifier. Examples: America/New_York, Europe/London, Asia/Tokyo.",
+    "init.timezone_detected": "Detected timezone: {tz}",
     "init.timezone_use_detected": "Use this timezone?",
-    "init.timezone_detection_failed": "Could not detect system timezone.",
-    "init.xfce_notifications_updated": "XFCE notifications config updated (history enabled).",
-    "init.directories_created": "Directories created.",
-    "init.secret_generated": ".secret generated.",
-    "init.secret_preserved": ".secret already exists — preserved.",
-    "init.secret_integrity_broken": ".secret not found but data.db exists. Integrity compromised. Recover manually.",
+    "init.timezone_detection_failed": "Could not auto-detect timezone.",
+    "init.xfce_notifications_updated": "XFCE notification configuration updated for strict mode.",
+    "init.directories_created": "Base directories created.",
+    "init.secret_generated": "New master secret generated.",
+    "init.secret_preserved": "Master secret detected and preserved.",
+    "init.secret_integrity_broken": "Integrity failure: could not read or write secret file (check permissions).",
     "init.db_initialized": "SQLite database initialized.",
-    "init.config_saved": "Configuration saved (nick: {nickname}, tz: {tz}).",
-    "init.complete": "Installation complete",
-    "init.ready": "Fokiz is ready. Use 'fokiz add' to create your first contract.",
-    "init.linux_required": "Fokiz requires Linux.",
-    "init.python_required": "Python >= 3.8 required.",
+    "init.config_saved": "Configuration saved (Nickname: {nickname} | TZ: {tz}).",
+    "init.complete": "Installation Complete",
+    "init.ready": "Fokiz is ready. Use 'fokiz add' to create a new contract.",
+    "init.linux_required": "Fokiz currently only supports Linux.",
+    "init.python_required": "Fokiz requires Python 3.10 or higher.",
     "init.systemd_daemon_reload": "Reloading systemd --user daemon...",
     "init.systemd_enabling": "Enabling fokiz.timer...",
     "init.systemd_starting": "Starting fokiz.timer...",
@@ -366,10 +394,16 @@ EN_STRINGS: dict[str, str] = {
     "init.already_initialized": "Fokiz is already initialized.",
     "init.hmac_verified": "HMAC verified successfully.",
     "init.hash_correction": "⚠ Performing internal hash correction...",
+    "init.hook_installed": "Hook installed in {file}",
+    "init.hook_already_present": "Hook already present in {file}",
+    "init.systemd_timer_activated": "systemd timer activated.",
+    "init.diag_not_found": "{name} — not found",
 
     # --- Status ---
     "status.title": "Diagnostics",
     "status.timezone": "Timezone",
+    "status.local_time": "  Local time : {time}",
+    "status.timezone_field": "  Timezone   : {tz}",
     "status.no_active": "No active contract at this time.",
     "status.no_tasks": "No tasks registered.",
     "status.new_version": "\n\033[93m[i] New Fokiz version available ({latest_version}).\033[0m",
@@ -433,6 +467,14 @@ EN_STRINGS: dict[str, str] = {
     "error.early_completion": "You completed this phase too early. Confirm explicitly that you actually finished it.",
     "error.dependency_missing": "Missing dependency: {dep}",
     "error.presence_detection": "Could not detect user presence.",
+
+    # --- Anti-cheat ---
+    "anti_cheat.garbage": "Garbage content detected.",
+    "anti_cheat.keyboard_pattern": "Keyboard pattern detected.",
+    "anti_cheat.low_entropy": "Entropy too low ({entropy:.2f} bits). The text seems repetitive or lacks information.",
+    "anti_cheat.too_short": "Log too short ({length} characters). Minimum required: {min_chars}.",
+    "anti_cheat.no_overlap": "The log doesn't seem related to the phase instructions. Include at least one term from the completed work.",
+    "anti_cheat.early_confirm_phrase": "i confirm i finished early",
 
     # --- UI prompts ---
     "ui.int_minimum": "Enter an integer (minimum {minimum}).",

@@ -17,9 +17,9 @@ from .constants import (
     LOG_MIN_CHARS,
     LOG_TOKENS_OVERLAP_MIN,
     LOG_EARLY_TAU_THRESHOLD,
-    EARLY_CONFIRM_PHRASE,
 )
 from .errors import AntiCheatError, EarlyCompletionError
+from .i18n import _
 
 
 # ---------------------------------------------------------------------------
@@ -73,26 +73,22 @@ def _check_garbage(log: str) -> None:
     stripped = log.strip()
     for pattern in _GARBAGE_PATTERNS:
         if pattern.match(stripped):
-            raise AntiCheatError("Contenido de relleno detectado.")
+            raise AntiCheatError(_("anti_cheat.garbage"))
     lowered = stripped.lower().replace(" ", "")
     if lowered in _KEYBOARD_ROWS:
-        raise AntiCheatError("Patrón de teclado detectado.")
+        raise AntiCheatError(_("anti_cheat.keyboard_pattern"))
 
 
 def _check_entropy(log: str) -> None:
     entropy = _shannon_entropy(log.strip())
     if entropy < ENTROPY_MIN:
-        raise AntiCheatError(
-            f"Entropía demasiado baja ({entropy:.2f} bits). "
-            "El texto parece repetitivo o sin información."
-        )
+        raise AntiCheatError(_("anti_cheat.low_entropy", entropy=entropy))
 
 
 def _check_length(log: str) -> None:
     if len(log.strip()) < LOG_MIN_CHARS:
         raise AntiCheatError(
-            f"Bitácora muy corta ({len(log.strip())} caracteres). "
-            f"Mínimo requerido: {LOG_MIN_CHARS}."
+            _("anti_cheat.too_short", length=len(log.strip()), min_chars=LOG_MIN_CHARS)
         )
 
 
@@ -103,10 +99,7 @@ def _check_lexical_overlap(log: str, instructions: str) -> None:
         return  # No instructions to compare against
     overlap = log_tokens & instr_tokens
     if len(overlap) < LOG_TOKENS_OVERLAP_MIN:
-        raise AntiCheatError(
-            "La bitácora no parece relacionada con las instrucciones de la fase. "
-            "Incluye al menos un término del trabajo realizado."
-        )
+        raise AntiCheatError(_("anti_cheat.no_overlap"))
 
 
 def _normalize_phrase(text: str) -> str:
@@ -145,7 +138,7 @@ def _check_early_completion(log: str, tau: float) -> None:
     if tau >= LOG_EARLY_TAU_THRESHOLD:
         return
     normalized_log = _normalize_phrase(log)
-    normalized_phrase = _normalize_phrase(EARLY_CONFIRM_PHRASE)
+    normalized_phrase = _normalize_phrase(_("anti_cheat.early_confirm_phrase"))
     # The log must contain the phrase (it may have more text after)
     if normalized_phrase not in normalized_log:
         raise EarlyCompletionError()
@@ -153,4 +146,4 @@ def _check_early_completion(log: str, tau: float) -> None:
 
 def validate_early_confirm_phrase(text: str) -> bool:
     """Utility: return True if the text contains the required early-confirm phrase."""
-    return _normalize_phrase(EARLY_CONFIRM_PHRASE) in _normalize_phrase(text)
+    return _normalize_phrase(_("anti_cheat.early_confirm_phrase")) in _normalize_phrase(text)

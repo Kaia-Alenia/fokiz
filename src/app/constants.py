@@ -15,7 +15,7 @@ FOKIZ_DATA_DIR = HOME / ".local" / "share" / "fokiz"
 FOKIZ_BIN_DIR = HOME / ".local" / "bin"
 SYSTEMD_USER_DIR = HOME / ".config" / "systemd" / "user"
 
-FOKIZ_VERSION = "0.8.0"
+FOKIZ_VERSION = "0.9.0"
 
 APP_DIR = FOKIZ_DATA_DIR / "app"
 DB_PATH = FOKIZ_DATA_DIR / "data.db"
@@ -91,7 +91,6 @@ BUDGET_SECONDARY: float = 0.20
 # ---------------------------------------------------------------------------
 
 LOG_EARLY_TAU_THRESHOLD: float = 0.10  # if τ < this, require confirmation
-EARLY_CONFIRM_PHRASE: str = "confirmo que termine antes de tiempo"
 
 ENTROPY_MIN: float = 1.5               # bits; below this → rejected
 LOG_MIN_CHARS: int = 20                # minimum meaningful log length

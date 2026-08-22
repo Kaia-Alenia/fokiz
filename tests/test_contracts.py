@@ -96,8 +96,8 @@ class TestA_OneDayAt22h(unittest.TestCase):
 
     def test_build_contract_deadline(self):
         contract = build_contract(
-            title="Tarea de prueba A",
-            objective="Verificar que el deadline es correcto al crear a las 22h",
+            title="Test task A",
+            objective="Verify that the deadline is correct when created at 22h",
             total_days=1,
             total_phases=1,
             phase_inputs=[{"title": "Single phase", "instructions": "Complete the task", "days": 1}],
@@ -162,8 +162,8 @@ class TestB_OneDayAt0005(unittest.TestCase):
 
     def test_build_contract_deadline(self):
         contract = build_contract(
-            title="Tarea de prueba B",
-            objective="Verificar deadline a las 00:05 de inicio del día",
+            title="Test task B",
+            objective="Verify deadline at 00:05 of day start",
             total_days=1,
             total_phases=1,
             phase_inputs=[{"title": "Single phase", "instructions": "Complete the task", "days": 1}],
@@ -226,8 +226,8 @@ class TestC_ThreeDaysAt22h(unittest.TestCase):
     def test_build_contract_phases(self):
         """5-day contract with 3 phases: 2+1+2."""
         contract = build_contract(
-            title="Proyecto de 5 días Test C",
-            objective="Verificar fechas contractuales de 5 días desde las 22h",
+            title="5-day project Test C",
+            objective="Verify contractual dates for 5 days starting at 22h",
             total_days=5,
             total_phases=3,
             phase_inputs=[
@@ -292,8 +292,8 @@ class TestE_TimezoneChangeDoesNotMoveDeadlines(unittest.TestCase):
 
     def test_original_deadline_unchanged_after_zone_switch(self):
         contract_mx = build_contract(
-            title="Tarea zona MX",
-            objective="Verificar que el deadline es absoluto e inmutable",
+            title="MX zone task",
+            objective="Verify that the deadline is absolute and immutable",
             total_days=1,
             total_phases=1,
             phase_inputs=[{"title": "Phase", "instructions": "Do something", "days": 1}],
@@ -304,8 +304,8 @@ class TestE_TimezoneChangeDoesNotMoveDeadlines(unittest.TestCase):
 
         # Build same logical contract in NY timezone (UTC-4 in August 2026)
         contract_ny = build_contract(
-            title="Tarea zona MX",
-            objective="Verificar que el deadline es absoluto e inmutable",
+            title="MX zone task",
+            objective="Verify that the deadline is absolute and immutable",
             total_days=1,
             total_phases=1,
             phase_inputs=[{"title": "Phase", "instructions": "Do something", "days": 1}],
@@ -415,8 +415,8 @@ class TestH_PhaseSchedulingInvariant(unittest.TestCase):
         self.t0_utc = self.t0_local.astimezone(timezone.utc)
 
         contract = build_contract(
-            title="Tarea de prueba de scheduling",
-            objective="Verificar que las deadlines de fase no se desplazan",
+            title="Scheduling test task",
+            objective="Verify that phase deadlines do not shift",
             total_days=5,
             total_phases=2,
             phase_inputs=[
@@ -482,7 +482,7 @@ class TestH_PhaseSchedulingInvariant(unittest.TestCase):
         db.complete_phase(
             task_id=self.task_id,
             phase_number=1,
-            log="Log de evidencia suficientemente largo y relacionado con las instrucciones.",
+            log="Evidence log sufficiently long and related to the instructions.",
             completed_at=late_completion_time,
             path=self.db_path,
         )

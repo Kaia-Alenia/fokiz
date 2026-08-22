@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.6.0-0.8.0]
+## [0.9.0] - 2026-08-22
 ### Fixed
 - Fixed critical i18n regression where internal string keys were exposed in CLI output instead of localized strings.
 - Refactored `messages.py` to route all status messages through the centralized i18n registry.
