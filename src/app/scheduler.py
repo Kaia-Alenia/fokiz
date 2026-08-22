@@ -182,6 +182,17 @@ def decide_dispatches(
     if not metrics_list:
         return decisions
 
+    from .db import get_user_config
+    user_config = get_user_config()
+    nickname = user_config["nickname"] if user_config and "nickname" in user_config.keys() else "Usuario"
+    tz_str = user_config["timezone"] if user_config and "timezone" in user_config.keys() else "GMT-6"
+    import re
+    from datetime import timedelta
+    m = re.match(r"^(?:GMT|UTC)([+-]\d+)$", tz_str.upper())
+    offset_h = int(m.group(1)) if m else 0
+    local_time = now + timedelta(hours=offset_h)
+    local_hour = local_time.hour
+
     # Presence check (skip if not active and not wakeup burst)
     if not wakeup_burst:
         if not presence.detected:
@@ -201,7 +212,7 @@ def decide_dispatches(
         primary.last_notification_iso, primary.i_spam_min, now
     )
     if primary_ok:
-        msg = pick_message(primary.zone, wakeup=wakeup_burst)
+        msg = pick_message(primary.zone, wakeup=wakeup_burst, nickname=nickname, local_hour=local_hour)
         decisions.append(DispatchDecision(
             should_dispatch=True,
             task_id=primary.task_id,
@@ -214,7 +225,7 @@ def decide_dispatches(
     # Secondary tasks — only dispatch one consolidated summary per cycle
     for m in secondary:
         if cooldown_elapsed(m.last_notification_iso, m.i_spam_min, now):
-            msg = f"[{m.title}] Fase {m.phase_number} — τ={m.tau:.2f} ({m.zone.value})"
+            msg = f"[{m.title}] Phase {m.phase_number} — τ={m.tau:.2f} ({m.zone.value})"
             decisions.append(DispatchDecision(
                 should_dispatch=True,
                 task_id=m.task_id,

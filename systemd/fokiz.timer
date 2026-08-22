@@ -1,5 +1,5 @@
 [Unit]
-Description=Fokiz — Timer episódico (60s)
+Description=Fokiz — Episodic Timer (60s)
 After=graphical-session.target
 
 [Timer]

@@ -141,6 +141,6 @@ def get_presence() -> PresenceResult:
     if idle is not None:
         return PresenceResult(idle_seconds=idle, method="dbus")
 
-    error_msg = "No se pudo detectar tiempo de inactividad (xprintidle y D-Bus fallaron)."
+    error_msg = "Could not detect idle time (xprintidle and D-Bus both failed)."
     log.warning(error_msg)
     return PresenceResult(idle_seconds=None, method="none", error=error_msg)

@@ -15,7 +15,7 @@ FOKIZ_DATA_DIR = HOME / ".local" / "share" / "fokiz"
 FOKIZ_BIN_DIR = HOME / ".local" / "bin"
 SYSTEMD_USER_DIR = HOME / ".config" / "systemd" / "user"
 
-FOKIZ_VERSION = "0.5.0"
+FOKIZ_VERSION = "0.6.0"
 
 APP_DIR = FOKIZ_DATA_DIR / "app"
 DB_PATH = FOKIZ_DATA_DIR / "data.db"
@@ -112,9 +112,11 @@ BANNER_WIDTH: int = 60
 PROGRESS_BAR_WIDTH: int = 30
 
 # ---------------------------------------------------------------------------
-# Timezone default
+# Timezone default and validation
 # ---------------------------------------------------------------------------
 
+# Default IANA timezone identifier used when none is configured.
+# Must be a valid IANA tz name accepted by zoneinfo.ZoneInfo().
 DEFAULT_TIMEZONE: str = "America/Mexico_City"
 
 # ---------------------------------------------------------------------------

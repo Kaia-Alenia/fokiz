@@ -21,6 +21,7 @@ import sys
 import textwrap
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from .anti_cheat import validate_completion_log
 from .config import load_config, save_config
@@ -125,22 +126,100 @@ def _utcnow_iso() -> str:
 
 
 # ---------------------------------------------------------------------------
+# Timezone helpers for fokiz init
+# ---------------------------------------------------------------------------
+
+def _detect_system_timezone() -> str | None:
+    """
+    Attempt to detect the system's IANA timezone identifier.
+
+    Strategy (in order of preference):
+    1. Read /etc/localtime symlink and extract the IANA name.
+    2. Read /etc/timezone file (Debian/Ubuntu style).
+    3. Parse `timedatectl show` output.
+
+    Returns an IANA timezone string (e.g. "America/Mexico_City") or None
+    if detection fails.  Never returns a GMT/UTC offset string.
+    """
+    import os as _os
+
+    # Strategy 1: /etc/localtime symlink
+    try:
+        link = _os.readlink("/etc/localtime")
+        # Typical path: /usr/share/zoneinfo/America/Mexico_City
+        if "zoneinfo/" in link:
+            tz_name = link.split("zoneinfo/", 1)[1]
+            ZoneInfo(tz_name)  # validate
+            return tz_name
+    except (OSError, Exception):
+        pass
+
+    # Strategy 2: /etc/timezone file
+    try:
+        tz_name = Path("/etc/timezone").read_text(encoding="utf-8").strip()
+        if tz_name:
+            ZoneInfo(tz_name)  # validate
+            return tz_name
+    except Exception:
+        pass
+
+    # Strategy 3: timedatectl
+    try:
+        result = subprocess.run(
+            ["timedatectl", "show", "--property=Timezone", "--value"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            tz_name = result.stdout.strip()
+            if tz_name:
+                ZoneInfo(tz_name)  # validate
+                return tz_name
+    except Exception:
+        pass
+
+    return None
+
+
+def _prompt_iana_timezone() -> str:
+    """
+    Interactively prompt the user for a valid IANA timezone identifier.
+
+    Keeps asking until the user provides a string accepted by ZoneInfo.
+    Returns the validated IANA string.
+    """
+    from .constants import DEFAULT_TIMEZONE
+    while True:
+        tz_input = ui.prompt(
+            _("init.timezone_prompt"),
+            default=DEFAULT_TIMEZONE,
+        )
+        try:
+            ZoneInfo(tz_input)
+            return tz_input
+        except Exception:
+            ui.print_error(
+                f"'{tz_input}' is not a valid IANA identifier. "
+                "Examples: America/Mexico_City, Europe/Madrid, Asia/Tokyo."
+            )
+
+
+# ---------------------------------------------------------------------------
 # cmd_init
 # ---------------------------------------------------------------------------
 
 def cmd_init() -> int:
     """fokiz init — install Fokiz on this system."""
     print(ui.render_banner(size="LARGE"))
-    ui.print_section(_("FOKIZ INIT"))
+    ui.print_section(_("init.title"))
 
     # 1. Platform check
     if sys.platform != "linux":
-        ui.print_error(_("Fokiz requiere Linux."))
+        ui.print_error(_("init.linux_required"))
         return 1
 
     # 2. Python version
     if sys.version_info < (3, 8):
-        ui.print_error(_("Se requiere Python >= 3.8."))
+        ui.print_error(_("init.python_required"))
         return 1
 
     # 3. systemd --user
@@ -150,18 +229,18 @@ def cmd_init() -> int:
         timeout=10,
     )
     if result.returncode not in (0, 1, 3):
-        ui.print_warning(_("systemd --user no disponible. Las notificaciones automáticas no funcionarán."))
+        ui.print_warning(_("init.systemd_not_running"))
 
     # 4. Dependencies
     deps = {
-        "notify-send": "Notificaciones de escritorio",
-        "xprintidle": "Detección de presencia (opcional)",
+        "notify-send": "desktop notifications",
+        "xprintidle": "presence detection (optional)",
     }
     for dep, desc in deps.items():
         if shutil.which(dep):
-            ui.print_success(_(f"{dep} — {desc}"))
+            ui.print_success(f"{dep} — {desc}")
         else:
-            ui.print_warning(_(f"{dep} no encontrado — {desc}"))
+            ui.print_warning(f"{dep} not found — {desc}")
 
     # 4.5. XFCE Notification logging fix
     if shutil.which("xfconf-query"):
@@ -176,7 +255,7 @@ def cmd_init() -> int:
                     ["xfconf-query", "-c", "xfce4-notifyd", "-p", "/log-level", "-s", "0"],
                     capture_output=True, timeout=5
                 )
-                ui.print_success(_("Configuración de notificaciones de XFCE actualizada (historial activado)."))
+                ui.print_success(_("init.xfce_notifications_updated"))
             
             # Disable Do Not Disturb (permanently prevent muting)
             subprocess.run(
@@ -184,46 +263,55 @@ def cmd_init() -> int:
                 capture_output=True, timeout=5
             )
         except Exception as e:
-            log.debug(f"Fallo al configurar xfce4-notifyd: {e}")
+            log.debug(f"Failed to configure xfce4-notifyd: {e}")
 
     # 5. Nickname
-    nickname = ui.prompt(_("Ingresa tu nombre o apodo"))
+    nickname = ui.prompt(_("init.nickname_prompt"))
     if not nickname:
-        ui.print_error(_("El nombre no puede estar vacío."))
+        ui.print_error(_("init.name_empty"))
         return 1
 
-    # 6. Timezone
-    from .constants import DEFAULT_TIMEZONE
-    tz = ui.prompt(_("Zona horaria"), default=DEFAULT_TIMEZONE)
+    # 6. Timezone — detect system IANA timezone, confirm or let user set it
+    detected_tz = _detect_system_timezone()
+    if detected_tz:
+        print()
+        print(_("init.timezone_detected"))
+        print(f"  {detected_tz}")
+        use_detected = ui.confirm(_("init.timezone_use_detected"))
+        if use_detected:
+            tz = detected_tz
+        else:
+            tz = _prompt_iana_timezone()
+    else:
+        ui.print_warning(_("init.timezone_detection_failed"))
+        tz = _prompt_iana_timezone()
 
     # 7. Create directories
     FOKIZ_DATA_DIR.mkdir(parents=True, exist_ok=True)
     FOKIZ_BIN_DIR.mkdir(parents=True, exist_ok=True)
     SYSTEMD_USER_DIR.mkdir(parents=True, exist_ok=True)
     APP_DIR.mkdir(parents=True, exist_ok=True)
-    ui.print_success(_("Directorios creados."))
+    ui.print_success(_("init.directories_created"))
 
     # 8. Generate .secret if not exists
     if SECRET_PATH.exists():
-        ui.print_info(_(".secret ya existe — preservado."))
+        ui.print_info(_("init.secret_preserved"))
     elif DB_PATH.exists():
         # DB exists but no secret — dangerous, block
-        ui.print_error(_(".secret no encontrado pero data.db existe. "
-            "Integridad comprometida. Recupera manualmente.")
-        )
+        ui.print_error(_("init.secret_integrity_broken"))
         return 1
     else:
         generate_secret(SECRET_PATH)
-        ui.print_success(_(".secret generado."))
+        ui.print_success(_("init.secret_generated"))
 
     # 9. Create SQLite + schema (idempotent)
     db.create_schema(DB_PATH)
-    ui.print_success(_("Base de datos SQLite inicializada."))
+    ui.print_success(_("init.db_initialized"))
 
     # 10. User config
     db.upsert_user_config(nickname=nickname, timezone=tz)
     save_config({"timezone": tz, "max_active_slots": MAX_ACTIVE_SLOTS})
-    ui.print_success(_(f"Configuración guardada (nick: {nickname}, tz: {tz})."))
+    ui.print_success(_("init.config_saved", nickname=nickname, tz=tz))
 
     # 11. Install wrappers
     _install_wrappers()
@@ -240,8 +328,8 @@ def cmd_init() -> int:
     # 15. Diagnostic run
     _run_diagnostic()
 
-    ui.print_section(_("Instalación completa"))
-    ui.print_success(_("Fokiz está listo. Usa 'fokiz add' para crear tu primer contrato."))
+    ui.print_section(_("init.complete"))
+    ui.print_success(_("init.ready"))
     return 0
 
 
@@ -266,7 +354,7 @@ def _install_wrappers() -> None:
         encoding="utf-8",
     )
     fokiz_monitor_bin.chmod(0o755)
-    ui.print_success(_("Wrappers instalados en ~/.local/bin/"))
+    ui.print_success(_("installer.wrappers_installed"))
 
 
 def _install_systemd() -> None:
@@ -278,7 +366,7 @@ def _install_systemd() -> None:
 
     service_path.write_text(service_content, encoding="utf-8")
     timer_path.write_text(_TIMER_TEMPLATE, encoding="utf-8")
-    ui.print_success(_("Unidades systemd instaladas."))
+    ui.print_success(_("init.systemd_units_installed"))
 
 
 def _install_shell_hook() -> None:
@@ -289,9 +377,9 @@ def _install_shell_hook() -> None:
             if "# Fokiz Terminal Hook" not in content:
                 with rc_file.open("a", encoding="utf-8") as f:
                     f.write(f"\n{hook_line}")
-                ui.print_success(_(f"Hook instalado en {rc_file.name}"))
+                ui.print_success(f"Hook installed in {rc_file.name}")
             else:
-                ui.print_info(_(f"Hook ya presente en {rc_file.name}"))
+                ui.print_info(f"Hook already present in {rc_file.name}")
 
 
 def _activate_systemd_timer() -> None:
@@ -304,13 +392,13 @@ def _activate_systemd_timer() -> None:
             ["systemctl", "--user", "enable", "--now", "fokiz-monitor.timer"],
             capture_output=True, timeout=15,
         )
-        ui.print_success(_("Timer systemd activado."))
+        ui.print_success("systemd timer activated.")
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-        ui.print_warning(_("No se pudo activar el timer systemd. Actívalo manualmente."))
+        ui.print_warning(_("init.systemd_timer_failed"))
 
 
 def _run_diagnostic() -> None:
-    ui.print_section(_("Diagnóstico"))
+    ui.print_section(_("status.title"))
     checks = {
         "data.db": DB_PATH.exists(),
         ".secret": SECRET_PATH.exists(),
@@ -323,7 +411,7 @@ def _run_diagnostic() -> None:
         if ok:
             ui.print_success(name)
         else:
-            ui.print_warning(_(f"{name} — no encontrado"))
+            ui.print_warning(f"{name} — not found")
 
 
 # ---------------------------------------------------------------------------
@@ -334,36 +422,37 @@ def cmd_add() -> int:
     """fokiz add — create a new Ulysses contract interactively."""
     _require_initialized()
 
-    ui.print_section(_("NUEVO CONTRATO DE ULISES"))
-    ui.print_warning(_("Este contrato es irreversible. Una vez confirmado, no podrás modificar el plazo."))
+    ui.print_section(_("contract.summary_title"))
+    ui.print_warning(_("contract.warning"))
 
     # Slot check
     active_count = db.count_active_tasks()
     if active_count >= MAX_ACTIVE_SLOTS:
-        ui.print_error(_(f"Slots activos llenos ({active_count}/{MAX_ACTIVE_SLOTS}). Completa o ríndete primero."))
+        ui.print_error(_("contract.slots_full", active_count=active_count, max_slots=MAX_ACTIVE_SLOTS))
         return 1
 
     # Collect inputs
-    title = ui.prompt(_("Título del proyecto (5–80 caracteres)"))
-    objective = ui.prompt(_("Objetivo (10–200 caracteres)"))
+    title = ui.prompt(_("contract.title_prompt"))
+    objective = ui.prompt(_("contract.objective_prompt"))
 
-    total_days = ui.prompt_int(_("Días totales para el proyecto"), minimum=1)
-    total_phases = ui.prompt_int(_("Número de fases (1–8)"), minimum=1, maximum=8)
+    total_days = ui.prompt_int(_("contract.days_prompt"), minimum=1)
+    total_phases = ui.prompt_int(_("contract.phases_prompt"), minimum=1, maximum=8)
 
     phase_inputs = []
     remaining_days = total_days
     for i in range(1, total_phases + 1):
-        ui.print_section(_(f"Fase {i} de {total_phases}"))
-        ph_title = ui.prompt(_(f"Título de la fase {i}"))
-        ph_instructions = ui.prompt(_(f"Instrucciones/criterios de la fase {i}"))
+        ui.print_section(_("contract.phase_section", i=i, total_phases=total_phases))
+        ph_title = ui.prompt(_("contract.phase_title_prompt", i=i))
+        ph_instructions = ui.prompt(_("contract.phase_instructions_prompt", i=i))
         if i < total_phases:
-            ph_days = ui.prompt_int(_(f"Días asignados a la fase {i} (quedan {remaining_days} para {total_phases - i + 1} fases)"),
+            ph_days = ui.prompt_int(
+                _("contract.phase_days_prompt", i=i, remaining_days=remaining_days, rem_phases=total_phases - i + 1),
                 minimum=1,
                 maximum=remaining_days - (total_phases - i),
             )
         else:
             ph_days = remaining_days
-            ui.print_info(_(f"Días asignados a la fase {i}: {ph_days} (resto automático)"))
+            ui.print_info(_("contract.phase_days_auto", i=i, ph_days=ph_days))
         remaining_days -= ph_days
         phase_inputs.append({
             "title": ph_title,
@@ -372,6 +461,9 @@ def cmd_add() -> int:
         })
 
     # Build and validate contract
+    # Load user timezone from config
+    cfg = load_config()
+    user_tz = cfg.get("timezone", None)
     try:
         contract = build_contract(
             title=title,
@@ -379,24 +471,25 @@ def cmd_add() -> int:
             total_days=total_days,
             total_phases=total_phases,
             phase_inputs=phase_inputs,
+            user_timezone=user_tz,
         )
     except ValidationError as e:
         ui.print_error(str(e))
         return 1
 
     # Show summary
-    ui.print_section(_("RESUMEN DEL CONTRATO"))
-    print(f"  Título    : {contract.title}")
-    print(f"  Objetivo  : {contract.objective}")
-    print(f"  Días      : {contract.total_days}")
-    print(f"  Fases     : {contract.total_phases}")
-    print(f"  Creado    : {contract.created_at}")
-    print(f"  Deadline  : {contract.deadline}")
+    ui.print_section(_("contract.summary_header"))
+    print(_("contract.field_title", title=contract.title))
+    print(_("contract.field_objective", objective=contract.objective))
+    print(_("contract.field_days", days=contract.total_days))
+    print(_("contract.field_phases", phases=contract.total_phases))
+    print(f"  Created   : {contract.created_at}")
+    print(_("contract.field_deadline", deadline=contract.deadline))
     for ph in contract.phases:
-        print(f"  Fase {ph.phase_number}: {ph.title} → {ph.target_deadline} ({ph.days}d)")
+        print(_("contract.phase_row", phase_number=ph.phase_number, title=ph.title, target_deadline=ph.target_deadline, days=ph.days))
 
-    if not ui.confirm(_("\n¿Confirmas este contrato? No hay vuelta atrás")):
-        ui.print_info(_("Contrato cancelado."))
+    if not ui.confirm(_("contract.confirm_prompt")):
+        ui.print_info(_("contract.cancelled"))
         return 0
 
     # Insert task
@@ -455,11 +548,11 @@ def cmd_add() -> int:
     phases_rows = db.get_phases(task_id)
     status = check_contract_integrity(task_row, phases_rows)
     if status != IntegrityStatus.OK:
-        ui.print_error(_(f"Verificación HMAC inmediata falló: {status.value}"))
+        ui.print_error(f"Immediate HMAC verification failed: {status.value}")
         return 1
 
-    ui.print_success(_(f"Contrato creado. ID de tarea: #{task_id}"))
-    ui.print_success(_("HMAC verificado correctamente."))
+    ui.print_success(_("contract.created", task_id=task_id))
+    ui.print_success(_("init.hmac_verified"))
     return 0
 
 
@@ -467,11 +560,23 @@ def cmd_add() -> int:
 def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
     """fokiz status — display tasks (active or completed depending on flag)."""
     if not DB_PATH.exists():
-        ui.print_error(_("Fokiz no está inicializado. Ejecuta 'fokiz init'."))
+        ui.print_error(_("error.not_initialized"))
         return 1
 
     if show_banner:
         print(ui.render_banner(size="LARGE"))
+
+        user_config = db.get_user_config()
+        if user_config:
+            tz_str = user_config["timezone"] if "timezone" in user_config.keys() else "America/Mexico_City"
+            try:
+                tz = ZoneInfo(tz_str)
+            except Exception:
+                tz = ZoneInfo("UTC")
+            now_local = datetime.now(timezone.utc).astimezone(tz)
+            print(f"  Local time : {now_local.strftime('%d/%m/%Y %H:%M')}")
+            print(f"  {_(\"status.timezone\")}     : {tz_str}")
+            print()
 
     tasks = db.get_all_tasks()
     
@@ -481,7 +586,7 @@ def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
         tasks = [t for t in tasks if t["status"] == "COMPLETED"]
         
     if not tasks:
-        msg = _("No hay tareas registradas.") if show_completed else _("ui_no_active")
+        msg = _("status.no_tasks") if show_completed else _("status.no_active")
         ui.print_info(msg)
         return 0
 
@@ -533,7 +638,7 @@ def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
             iu = 0.0
             zone = Zone.GREEN
             i_spam = compute_i_spam(tau)
-            phase_label = "Todas completadas"
+            phase_label = _("board.all_phases_done")
             time_remaining = "—"
 
         print()
@@ -559,8 +664,7 @@ def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
         from .updater import check_for_updates
         latest_version = check_for_updates()
         if latest_version:
-            print(f"\n\033[93m[i] Nueva versión de Fokiz disponible ({latest_version}).\033[0m")
-            print("    Actualiza ejecutando:")
+            print(_("status.new_version", latest_version=latest_version))
             print("    curl -sSL https://raw.githubusercontent.com/Kaia-Alenia/fokiz/main/install.sh | bash\n")
     except Exception:
         pass
@@ -583,7 +687,7 @@ def cmd_done(task_id: int) -> int:
         return 1
 
     if task["status"] != "ACTIVE":
-        ui.print_error(_(f"La tarea #{task_id} no está activa (estado: {task['status']})."))
+        ui.print_error(_("status.task_not_active", task_id=task_id, status=task['status']))
         return 1
 
     phases = db.get_phases(task_id)
@@ -596,7 +700,7 @@ def cmd_done(task_id: int) -> int:
     if status_integrity == IntegrityStatus.TAMPERED:
         ui.print_tampered_warning(task_id)
         db.log_integrity_event("TAMPERED_BLOCKED_DONE", task_id=task_id)
-        ui.print_error(_("No se puede completar una fase con contrato manipulado."))
+        ui.print_error(_("done.tampered_block"))
         return 1
 
     # Active phase
@@ -607,8 +711,8 @@ def cmd_done(task_id: int) -> int:
         return 1
 
     # Show instructions
-    ui.print_section(_(f"Fase #{active_phase['phase_number']} — {active_phase['title']}"))
-    print(f"  Instrucciones: {active_phase['instructions']}")
+    ui.print_section(_("done.phase_section", phase_number=active_phase['phase_number'], title=active_phase['title']))
+    print(f"  Instructions : {active_phase['instructions']}")
     print(f"  Deadline     : {active_phase['target_deadline']}")
 
     # Compute τ for anti-cheat
@@ -624,7 +728,7 @@ def cmd_done(task_id: int) -> int:
 
     # Request journal log
     print()
-    log_text = ui.prompt_multiline(_("Bitácora de la fase — ¿qué hiciste exactamente?"))
+    log_text = ui.prompt_multiline(_("done.log_prompt"))
 
     # Anti-cheat validation
     try:
@@ -638,8 +742,8 @@ def cmd_done(task_id: int) -> int:
         return 1
 
     # Confirmation
-    if not ui.confirm(_(f"¿Confirmas la fase #{active_phase['phase_number']} como COMPLETADA?")):
-        ui.print_info(_("Operación cancelada."))
+    if not ui.confirm(_("done.confirm_prompt", phase_number=active_phase['phase_number'])):
+        ui.print_info(_("ui.cancelled"))
         return 0
 
     # Complete phase
@@ -650,7 +754,7 @@ def cmd_done(task_id: int) -> int:
         ui.print_error(str(e))
         return 1
 
-    ui.print_success(_(f"Fase #{active_phase['phase_number']} completada."))
+    ui.print_success(_("done.phase_completed", phase_number=active_phase['phase_number']))
 
     # Check if all phases are done
     updated_phases = db.get_phases(task_id)
@@ -661,10 +765,10 @@ def cmd_done(task_id: int) -> int:
         except FokizError as e:
             ui.print_error(str(e))
             return 1
-        ui.print_success(_(f"¡Proyecto #{task_id} COMPLETADO! El contrato queda cerrado."))
+        ui.print_success(_("done.project_completed", task_id=task_id))
     else:
         remaining = [ph for ph in updated_phases if ph["status"] == "PENDING"]
-        ui.print_info(_(f"Siguiente fase: #{remaining[0]['phase_number']} — {remaining[0]['title']}"))
+        ui.print_info(_("done.next_phase", phase_number=remaining[0]['phase_number'], title=remaining[0]['title']))
 
     return 0
 
@@ -684,7 +788,7 @@ def cmd_surrender(task_id: int) -> int:
         return 1
 
     if task["status"] != "ACTIVE":
-        ui.print_error(_(f"La tarea #{task_id} no está activa (estado: {task['status']})."))
+        ui.print_error(_("status.task_not_active", task_id=task_id, status=task['status']))
         return 1
 
     phases = db.get_phases(task_id)
@@ -693,23 +797,19 @@ def cmd_surrender(task_id: int) -> int:
     status_integrity = check_contract_integrity(task, phases)
     if status_integrity == IntegrityStatus.TAMPERED:
         ui.print_tampered_warning(task_id)
-        ui.print_error(_("No se puede rendir con contrato manipulado. "
-            "La rendición no borra la evidencia de manipulación.")
-        )
+        ui.print_error(_("surrender.tampered_block"))
         return 1
 
-    ui.print_section(_(f"RENDICIÓN — Tarea #{task_id}: {task['title']}"))
-    ui.print_warning(_("Esto marcará la tarea como SURRENDERED permanentemente. "
-        "El registro histórico se conserva.")
-    )
+    ui.print_section(_("surrender.section", task_id=task_id, title=task['title']))
+    ui.print_warning(_("surrender.warning"))
 
-    if not ui.confirm(_("¿Confirmas la rendición?")):
-        ui.print_info(_("Operación cancelada."))
+    if not ui.confirm(_("surrender.confirm_prompt")):
+        ui.print_info(_("ui.cancelled"))
         return 0
 
-    reason = ui.prompt(_(f"Motivo de la rendición (mínimo {SURRENDER_REASON_MIN} caracteres)"))
+    reason = ui.prompt(_("surrender.reason_prompt", min_chars=SURRENDER_REASON_MIN))
     if len(reason.strip()) < SURRENDER_REASON_MIN:
-        ui.print_error(_(f"El motivo debe tener al menos {SURRENDER_REASON_MIN} caracteres."))
+        ui.print_error(_("surrender.reason_too_short", min_chars=SURRENDER_REASON_MIN))
         return 1
 
     try:
@@ -718,8 +818,8 @@ def cmd_surrender(task_id: int) -> int:
         ui.print_error(str(e))
         return 1
 
-    ui.print_warning(_(f"Tarea #{task_id} marcada como SURRENDERED."))
-    ui.print_info(_("El contrato y la rendición quedan registrados permanentemente."))
+    ui.print_warning(_("surrender.marked", task_id=task_id))
+    ui.print_info(_("surrender.recorded"))
     return 0
 
 
@@ -789,7 +889,7 @@ def cmd_board() -> int:
             iu = 0.0
             zone = Zone.GREEN
             i_spam = compute_i_spam(tau)
-            phase_label = "Todas completadas"
+            phase_label = _("board.all_phases_done")
             time_remaining = "—"
 
         card = ui.render_task_card(
@@ -829,19 +929,19 @@ def cmd_lang(lang_arg: str | None = None) -> int:
     
     if not lang_arg:
         current_lang = data.get('lang', 'auto')
-        print(f"Idioma actual / Current language: {current_lang}")
-        choice = ui.prompt("Selecciona idioma / Select language (es / en)")
+        print(_("lang.current", current_lang=current_lang))
+        choice = ui.prompt(_("lang.select_prompt"))
         if choice.lower() in ("es", "en"):
             lang_arg = choice.lower()
         else:
-            ui.print_error("Idioma no válido / Invalid language.")
+            ui.print_error(_("lang.invalid"))
             return 1
-            
+
     if lang_arg not in ("es", "en"):
-        ui.print_error("Idioma no válido / Invalid language.")
+        ui.print_error(_("lang.invalid"))
         return 1
-        
+
     data["lang"] = lang_arg
     save_config(data)
-    ui.print_success(f"Idioma cambiado a / Language changed to: {lang_arg}")
+    ui.print_success(_("lang.changed", lang_arg=lang_arg))
     return 0

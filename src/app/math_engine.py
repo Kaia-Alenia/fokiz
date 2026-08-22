@@ -40,9 +40,9 @@ class Zone(Enum):
 
 
 class DeltaStatus(Enum):
-    AHEAD = "ADELANTADO"
-    ON_TRACK = "AL DÍA"
-    BEHIND = "ATRASADO"
+    AHEAD = "AHEAD"
+    ON_TRACK = "ON_TRACK"
+    BEHIND = "BEHIND"
 
 
 # ---------------------------------------------------------------------------

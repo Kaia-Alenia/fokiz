@@ -14,6 +14,7 @@ from typing import Any
 
 from .constants import BANNER_WIDTH, PROGRESS_BAR_WIDTH
 from .math_engine import Zone, DeltaStatus
+from .i18n import _
 
 
 # ---------------------------------------------------------------------------
@@ -141,22 +142,37 @@ def render_task_card(
     dim = _c(C.DIM)
     cyan = _c(C.CYAN)
 
-    bar = render_progress_bar(tau if tau <= 1.0 else 1.0, zone=zone)
+    def _truncate(t: str, max_l: int) -> str:
+        return t if len(t) <= max_l else t[:max_l-1] + "…"
 
+    t_title = _truncate(title, 35)
+    t_phase = _truncate(phase_label, 38)
+    # Use progress bar width 26 to fit exactly within 55 columns (22 prefix + 26 bar + ~7 suffix = 55)
+    bar = render_progress_bar(tau if tau <= 1.0 else 1.0, width=25, zone=zone)
+    
+    l_status = _("card.status").ljust(10)
+    l_phase = _("card.phase").ljust(10)
+    l_prog = _("card.progress").ljust(10)
+    l_zone = _("card.zone").ljust(10)
+    l_int = _("card.interval").ljust(10)
+    l_rest = _("card.remaining").ljust(10)
+
+    from .messages import get_delta_label
     lines = [
-        f"{bold}{cyan}Tarea #{task_id} — {title}{reset}",
-        f"  Estado    : {status}",
-        f"  Fase      : {phase_label}",
-        f"  Progreso  : {phases_done}/{total_phases} fases completadas",
+        f"{bold}{cyan}{_('card.task')} #{task_id} — {t_title}{reset}",
+        f"  {l_status}: {status}",
+        f"  {l_phase}: {t_phase}",
+        f"  {l_prog}: {phases_done}/{total_phases} {_('card.phases_completed')}",
         f"  τ         : {tau:.4f}  {bar}",
-        f"  Δ         : {delta:+.4f}  ({delta_status.value})",
+        f"  Δ         : {delta:+.4f}  ({get_delta_label(delta_status)})",
         f"  IU        : {iu:.4f}",
-        f"  Zona      : {color}{zone.value}{reset}",
-        f"  Intervalo : {i_spam_min:.1f} min",
-        f"  Deadline  : {deadline}",
-        f"  Restante  : {time_remaining}",
+        f"  {l_zone}: {color}{zone.value}{reset}",
+        f"  {l_int}: {i_spam_min:.1f} {_('time.min')}",
+        f"  {_('card.deadline')}".ljust(12) + f": {deadline}",
+        f"  {l_rest}: {time_remaining}",
     ]
     return "\n".join(lines)
+
 
 
 # ---------------------------------------------------------------------------
@@ -188,20 +204,20 @@ def print_section(title: str) -> None:
 def print_tampered_warning(task_id: int) -> None:
     print(
         f"\n{_c(C.RED)}{_c(C.BOLD)}"
-        f"⚠ INTEGRIDAD COMPROMETIDA — Tarea #{task_id}"
+        f"⚠ {_(\"integrity.tampered_header\", task_id=task_id)}"
         f"{_c(C.RESET)}\n"
-        "  El HMAC no coincide. El contrato ha sido manipulado externamente.\n"
-        "  Operaciones contractuales bloqueadas hasta recuperación explícita.\n"
+        f"  {_(\"integrity.hmac_mismatch\")}\n"
+        f"  {_(\"integrity.blocked\")}\n"
     )
 
 
 def print_key_missing_warning() -> None:
     print(
         f"\n{_c(C.RED)}{_c(C.BOLD)}"
-        "⚠ INTEGRITY_KEY_MISSING"
+        "\u26a0 INTEGRITY_KEY_MISSING"
         f"{_c(C.RESET)}\n"
-        "  .secret no encontrado. No se puede verificar la integridad de los contratos.\n"
-        "  Ejecuta 'fokiz init' para recuperar o reinicializar.\n"
+        f"  {_(\"integrity.key_missing\")}\n"
+        f"  {_(\"integrity.recover\")}\n"
     )
 
 
@@ -225,25 +241,26 @@ def prompt_int(text: str, minimum: int = 1, maximum: int | None = None) -> int:
         try:
             value = int(raw)
         except ValueError:
-            print_error(f"Ingresa un número entero (mínimo {minimum}).")
+            print_error(_("ui.int_minimum", minimum=minimum))
             continue
         if value < minimum:
-            print_error(f"El valor debe ser >= {minimum}.")
+            print_error(_("ui.value_gte", minimum=minimum))
             continue
         if maximum is not None and value > maximum:
-            print_error(f"El valor debe ser <= {maximum}.")
+            print_error(_("ui.value_lte", maximum=maximum))
             continue
         return value
 
 
 def confirm(text: str) -> bool:
-    answer = prompt(f"{text} [s/N]").lower()
-    return answer in ("s", "si", "sí", "y", "yes")
+    yes_vals = set(_("ui.yes_values").split(","))
+    answer = prompt(f"{text} {_(\"ui.confirm_yes_no\")}").lower().strip()
+    return answer in yes_vals
 
 
 def prompt_multiline(text: str) -> str:
     """Prompt for multi-line input (empty line to finish)."""
-    print(f"{text} (línea vacía para terminar):")
+    print(_("ui.multiline_hint", text=text))
     lines = []
     while True:
         try:
@@ -269,7 +286,7 @@ def format_time_remaining(target_dt: datetime, now: datetime | None = None) -> s
         secs = abs(int(total_seconds))
         h, rem = divmod(secs, 3600)
         m, s = divmod(rem, 60)
-        return f"-{h:02d}h {m:02d}m {s:02d}s (VENCIDO)"
+        return f"-{h:02d}h {m:02d}m {s:02d}s ({_(\"time.expired\")})"
     secs = int(total_seconds)
     days, rem = divmod(secs, 86400)
     hours, rem = divmod(rem, 3600)
@@ -307,8 +324,8 @@ def render_board(active_tasks: list[str], completed_tasks: list[str]) -> str:
     out.append(render_banner(size="LARGE", width=TOTAL_WIDTH))
     
     # Center text manually to avoid ANSI escape sequences interfering with format alignments
-    hdr_left = "EN PROGRESO".center(COL_WIDTH)
-    hdr_right = "COMPLETADO".center(COL_WIDTH)
+    hdr_left = _('hdr_in_progress').center(COL_WIDTH)
+    hdr_right = _('hdr_completed').center(COL_WIDTH)
     out.append(f"{c_bold}{c_orange}{hdr_left}{c_reset}│{c_bold}{c_green}{hdr_right}{c_reset}")
     out.append("─" * COL_WIDTH + "┼" + "─" * COL_WIDTH)
     

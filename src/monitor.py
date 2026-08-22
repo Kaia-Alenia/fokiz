@@ -129,9 +129,9 @@ def run() -> None:
             # Still notify about tamper (fail-closed: keep notifying)
             try:
                 dispatch(
-                    title="⚠ Fokiz — Contrato Manipulado",
-                    body=f"Tarea #{task['id']} tiene integridad comprometida. "
-                         "Operaciones contractuales bloqueadas.",
+                    title="⚠ Fokiz — Tampered Contract",
+                    body=f"Task #{task['id']} has compromised integrity. "
+                         "Contract operations blocked.",
                     urgency="critical",
                     play_sound=False,
                 )

@@ -9,7 +9,7 @@ RULES:
 
 import random
 from .math_engine import Zone, DeltaStatus
-from .i18n import CURRENT_LANG
+from .i18n import _, CURRENT_LANG
 
 # ---------------------------------------------------------------------------
 # Message banks by zone/tone
@@ -135,26 +135,43 @@ _MESSAGES_SURRENDER = {
 }
 
 
+_MESSAGES_MADRUGADA = {
+    "es": [
+        "Es de madrugada, {nickname}. El contrato no duerme, tú tampoco deberías si estás atrasado.",
+        "Trabajando tarde, {nickname}. Aprovecha el silencio para avanzar.",
+        "La noche es larga, pero el deadline se acerca, {nickname}.",
+    ],
+    "en": [
+        "It's late at night, {nickname}. The contract doesn't sleep, and neither should you if you're behind.",
+        "Working late, {nickname}. Use the silence to make progress.",
+        "The night is long, but the deadline is getting closer, {nickname}.",
+    ]
+}
+
 # ---------------------------------------------------------------------------
 # Summary tone by delta
 # ---------------------------------------------------------------------------
 
 def get_delta_label(status: DeltaStatus) -> str:
     mapping = {
-        DeltaStatus.AHEAD: {"es": "ADELANTADO — Zona de tregua", "en": "AHEAD — Truce zone"},
-        DeltaStatus.ON_TRACK: {"es": "AL DÍA — Mantén el ritmo", "en": "ON TRACK — Keep the pace"},
-        DeltaStatus.BEHIND: {"es": "ATRASADO — Hostigamiento activo", "en": "BEHIND — Active harassment"},
+        DeltaStatus.AHEAD: "delta.ahead",
+        DeltaStatus.ON_TRACK: "delta.on_track",
+        DeltaStatus.BEHIND: "delta.behind",
     }
-    return mapping[status].get(CURRENT_LANG, mapping[status]["es"])
+    return _(mapping[status])
 
 
 # ---------------------------------------------------------------------------
 # Message selection
 # ---------------------------------------------------------------------------
 
-def pick_message(zone: Zone, wakeup: bool = False) -> str:
+def pick_message(zone: Zone, wakeup: bool = False, nickname: str = "User", local_hour: int = 12) -> str:
+    is_madrugada = (0 <= local_hour < 5)
+    
     if wakeup:
         bank_group = _MESSAGES_WAKEUP
+    elif is_madrugada and zone in (Zone.YELLOW, Zone.ORANGE, Zone.RED) and random.random() < 0.5:
+        bank_group = _MESSAGES_MADRUGADA
     else:
         banks = {
             Zone.GREEN: _MESSAGES_GREEN,
@@ -166,7 +183,13 @@ def pick_message(zone: Zone, wakeup: bool = False) -> str:
         bank_group = banks[zone]
         
     bank = bank_group.get(CURRENT_LANG, bank_group["es"])
-    return random.choice(bank)
+    msg = random.choice(bank)
+    
+    if bank_group != _MESSAGES_MADRUGADA and "{nickname}" not in msg:
+        if random.random() < 0.3:
+            msg = f"{nickname}, {msg[0].lower()}{msg[1:]}" if msg[0].isalpha() else f"{msg} ({nickname})"
+            
+    return msg.format(nickname=nickname)
 
 
 def pick_surrender_message() -> str:
@@ -175,11 +198,11 @@ def pick_surrender_message() -> str:
 
 
 def urgency_label(zone: Zone) -> str:
-    labels = {
+    urgency_map = {
         Zone.GREEN: {"es": "BAJA", "en": "LOW"},
         Zone.YELLOW: {"es": "MEDIA", "en": "MEDIUM"},
         Zone.ORANGE: {"es": "ALTA", "en": "HIGH"},
-        Zone.RED: {"es": "CRÍTICA", "en": "CRITICAL"},
-        Zone.EXPIRED: {"es": "CRÍTICA", "en": "CRITICAL"},
+        Zone.RED: {"es": "CR\u00cdTICA", "en": "CRITICAL"},
+        Zone.EXPIRED: {"es": "CR\u00cdTICA", "en": "CRITICAL"},
     }
-    return labels[zone].get(CURRENT_LANG, labels[zone]["es"])
+    return urgency_map[zone].get(CURRENT_LANG, urgency_map[zone]["es"])

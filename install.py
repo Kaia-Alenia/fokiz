@@ -84,7 +84,7 @@ HOOK_BLOCK = dedent("""\
 def _run(cmd: list[str]) -> int:
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
-        print(_("  ⚠ Error: {err}", err=result.stderr.strip()), file=sys.stderr)
+        print(_("installer.error", err=result.stderr.strip()), file=sys.stderr)
     return result.returncode
 
 
@@ -94,30 +94,30 @@ def install_systemd() -> bool:
     service_path = SYSTEMD_USER_DIR / "fokiz.service"
     timer_path = SYSTEMD_USER_DIR / "fokiz.timer"
 
-    print(_("Installing fokiz.service → {path}", path=service_path))
+    print(_("installer.service_path", path=service_path))
     service_path.write_text(SERVICE_UNIT, encoding="utf-8")
 
-    print(_("Installing fokiz.timer   → {path}", path=timer_path))
+    print(_("installer.timer_path", path=timer_path))
     timer_path.write_text(TIMER_UNIT, encoding="utf-8")
 
     # Check if systemd --user is running
     if _run(["systemctl", "--user", "is-system-running", "--quiet"]) not in (0, 1):
-        print(_("⚠ systemd --user does not seem to be running. Units installed but won't be activated."))
+        print(_("installer.systemd_not_running"))
         return False
 
-    print(_("Reloading systemd --user daemon..."))
+    print(_("init.systemd_daemon_reload"))
     _run(["systemctl", "--user", "daemon-reload"])
 
-    print(_("Enabling fokiz.timer..."))
+    print(_("init.systemd_enabling"))
     _run(["systemctl", "--user", "enable", "fokiz.timer"])
 
-    print(_("Starting fokiz.timer..."))
+    print(_("init.systemd_starting"))
     rc = _run(["systemctl", "--user", "start", "fokiz.timer"])
 
     if rc == 0:
-        print(_("✓ fokiz.timer active."))
+        print(_("init.systemd_active"))
     else:
-        print(_("⚠ Could not start fokiz.timer. Check: journalctl --user -u fokiz.timer"))
+        print(_("installer.timer_failed"))
         return False
     return True
 
@@ -125,13 +125,13 @@ def install_systemd() -> bool:
 def print_shell_hook_instructions() -> None:
     print()
     print("─" * 60)
-    print(_("Shell integration (optional but recommended)"))
+    print(_("installer.shell_integration_title"))
     print("─" * 60)
-    print(_("Add the following block to your ~/.bashrc or ~/.zshrc:"))
+    print(_("installer.shell_integration_hint"))
     print()
     print(HOOK_BLOCK)
     print("─" * 60)
-    print(_("This will show the Fokiz banner when opening a terminal."))
+    print(_("installer.shell_integration_effect"))
 
 
 def install_cli_entrypoint() -> None:
@@ -148,14 +148,14 @@ def install_cli_entrypoint() -> None:
 
     script.write_text(content, encoding="utf-8")
     script.chmod(0o755)
-    print(_("✓ Wrapper configured: {path}", path=script))
-    if not script.exists(): # just in case
-        print(_("  Make sure that {path} is in your $PATH.", path=local_bin))
+    print(_("installer.wrapper_ok", path=script))
+    if not script.exists():  # just in case
+        print(_("installer.path_hint", path=local_bin))
 
 
 def main() -> int:
     print("═" * 60)
-    print(_("  Fokiz — Installer"))
+    print(_("installer.title"))
     print("═" * 60)
 
     ok = install_systemd()
@@ -164,11 +164,11 @@ def main() -> int:
 
     if ok:
         print()
-        print(_("✓ Installation complete."))
-        print(_("  Check status with: systemctl --user status fokiz.timer"))
+        print(_("installer.complete"))
+        print(_("installer.check_status"))
     else:
         print()
-        print(_("⚠ Partial installation. Check the messages above."))
+        print(_("installer.partial"))
 
     return 0 if ok else 1
 
