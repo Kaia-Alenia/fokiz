@@ -55,3 +55,4 @@ src/.monitor_state
 # User databases (created at runtime in ~/.local/share/fokiz/)
 *.db
 *.sqlite3
+basura/
