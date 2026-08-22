@@ -264,3 +264,54 @@ def format_time_remaining(target_dt: datetime, now: datetime | None = None) -> s
     if days > 0:
         return f"{days}d {hours:02d}h {minutes:02d}m"
     return f"{hours:02d}h {minutes:02d}m"
+
+
+# ---------------------------------------------------------------------------
+# Board rendering
+# ---------------------------------------------------------------------------
+
+def render_board(active_tasks: list[str], completed_tasks: list[str]) -> str:
+    """Render a dual-column board with active and completed tasks."""
+    c_orange = _c(C.ORANGE)
+    c_green = _c(C.GREEN)
+    c_bold = _c(C.BOLD)
+    c_reset = _c(C.RESET)
+    
+    # ANSI-aware width padding
+    def _strip_ansi(text: str) -> str:
+        import re
+        return re.sub(r'\033\[[0-9;]*m', '', text)
+        
+    def _pad(text: str, width: int) -> str:
+        visible_len = len(_strip_ansi(text))
+        padding = max(0, width - visible_len)
+        return text + " " * padding
+        
+    COL_WIDTH = 55
+    out = []
+    out.append(render_banner(size="LARGE"))
+    out.append(f"{c_bold}{c_orange}{'EN PROGRESO':^{COL_WIDTH}}{c_reset}│{c_bold}{c_green}{'COMPLETADO':^{COL_WIDTH}}{c_reset}")
+    out.append("─" * COL_WIDTH + "┼" + "─" * COL_WIDTH)
+    
+    # Split task cards into lines
+    active_lines = [card.split("\n") for card in active_tasks]
+    completed_lines = [card.split("\n") for card in completed_tasks]
+    
+    # Display tasks side-by-side
+    max_idx = max(len(active_lines), len(completed_lines))
+    
+    for i in range(max_idx):
+        active_card = active_lines[i] if i < len(active_lines) else []
+        completed_card = completed_lines[i] if i < len(completed_lines) else []
+        
+        max_lines = max(len(active_card), len(completed_card))
+        for j in range(max_lines):
+            l_act = active_card[j] if j < len(active_card) else ""
+            l_cmp = completed_card[j] if j < len(completed_card) else ""
+            
+            out.append(f"{_pad(l_act, COL_WIDTH)}│{_pad(l_cmp, COL_WIDTH)}")
+            
+        out.append(" " * COL_WIDTH + "│" + " " * COL_WIDTH)
+        
+    return "\n".join(out)
+

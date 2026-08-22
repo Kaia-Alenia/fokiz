@@ -464,8 +464,8 @@ def cmd_add() -> int:
 
 
 
-def cmd_status(show_banner: bool = False) -> int:
-    """fokiz status — display all active tasks."""
+def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
+    """fokiz status — display tasks (active or completed depending on flag)."""
     if not DB_PATH.exists():
         ui.print_error(_("Fokiz no está inicializado. Ejecuta 'fokiz init'."))
         return 1
@@ -474,8 +474,15 @@ def cmd_status(show_banner: bool = False) -> int:
         print(ui.render_banner(size="LARGE"))
 
     tasks = db.get_all_tasks()
+    
+    if not show_completed:
+        tasks = [t for t in tasks if t["status"] != "COMPLETED"]
+    else:
+        tasks = [t for t in tasks if t["status"] == "COMPLETED"]
+        
     if not tasks:
-        ui.print_info(_("No hay tareas registradas."))
+        msg = _("No hay tareas registradas.") if show_completed else _("ui_no_active")
+        ui.print_info(msg)
         return 0
 
     now = datetime.now(timezone.utc)
@@ -723,3 +730,89 @@ def cmd_surrender(task_id: int) -> int:
 def _require_initialized() -> None:
     if not DB_PATH.exists() or not SECRET_PATH.exists():
         raise NotInitializedError()
+
+# ---------------------------------------------------------------------------
+# cmd_board
+# ---------------------------------------------------------------------------
+
+def cmd_board() -> int:
+    """fokiz board — display active and completed tasks side-by-side."""
+    _require_initialized()
+
+    tasks = db.get_all_tasks()
+    
+    active_tasks = []
+    completed_tasks = []
+    now = datetime.now(timezone.utc)
+    
+    for task in tasks:
+        phases = db.get_phases(task["id"])
+        
+        # Integrity check
+        status_integrity = check_contract_integrity(task, phases)
+        if status_integrity == IntegrityStatus.KEY_MISSING:
+            ui.print_key_missing_warning()
+        elif status_integrity == IntegrityStatus.TAMPERED:
+            # We skip tampered tasks or just mark them
+            continue
+            
+        phases_done = sum(1 for ph in phases if ph["status"] == "COMPLETED")
+        active_phase = next(
+            (ph for ph in sorted(phases, key=lambda p: p["phase_number"])
+             if ph["status"] == "PENDING"),
+            None,
+        )
+        
+        if active_phase:
+            prev_deadline_str = task["created_at"]
+            for ph in sorted(phases, key=lambda p: p["phase_number"]):
+                if ph["phase_number"] < active_phase["phase_number"]:
+                    prev_deadline_str = ph["target_deadline"]
+                    
+            t_start = _parse_utc(prev_deadline_str)
+            t_phase_dl = _parse_utc(active_phase["target_deadline"])
+            t_task_dl = _parse_utc(task["deadline"])
+            t_created = _parse_utc(task["created_at"])
+            
+            tau = compute_tau(now, t_start, t_phase_dl)
+            delta = compute_delta(phases_done, task["total_phases"], now, t_created, t_task_dl)
+            delta_status = classify_delta(delta)
+            iu = compute_iu(tau, now, t_phase_dl)
+            zone = classify_zone(tau)
+            i_spam = compute_i_spam(tau)
+            phase_label = f"#{active_phase['phase_number']} — {active_phase['title']}"
+            time_remaining = ui.format_time_remaining(t_phase_dl, now)
+        else:
+            tau = 0.0
+            delta = 0.0
+            delta_status = classify_delta(delta)
+            iu = 0.0
+            zone = Zone.GREEN
+            i_spam = compute_i_spam(tau)
+            phase_label = "Todas completadas"
+            time_remaining = "—"
+
+        card = ui.render_task_card(
+            task_id=task["id"],
+            title=task["title"],
+            status=task["status"],
+            phase_label=phase_label,
+            tau=tau,
+            delta=delta,
+            delta_status=delta_status,
+            iu=iu,
+            zone=zone,
+            i_spam_min=i_spam,
+            phases_done=phases_done,
+            total_phases=task["total_phases"],
+            deadline=task["deadline"],
+            time_remaining=time_remaining,
+        )
+        
+        if task["status"] == "COMPLETED":
+            completed_tasks.append(card)
+        else:
+            active_tasks.append(card)
+            
+    print(ui.render_board(active_tasks, completed_tasks))
+    return 0

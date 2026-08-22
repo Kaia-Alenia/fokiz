@@ -74,7 +74,7 @@ ES_STRINGS = {
     "time_sec": "s",
     
     # CLI
-    "cli_usage": "Fokiz — Contrato de Ulises\n\nUso:\n  fokiz init                  Instalar Fokiz en este sistema\n  fokiz add                   Crear un nuevo contrato\n  fokiz status                Ver estado de todos los contratos\n  fokiz status --banner       Ver estado con banner\n  fokiz done <task_id>        Completar la fase activa de una tarea\n  fokiz surrender <task_id>   Rendirse en una tarea\n  fokiz help                  Mostrar esta ayuda\n",
+    "cli_usage": "Fokiz — Contrato de Ulises\n\nUso:\n  fokiz init                  Instalar Fokiz en este sistema\n  fokiz add                   Crear un nuevo contrato\n  fokiz status                Ver tareas en progreso\n  fokiz status --complete     Ver tareas completadas\n  fokiz status --banner       Ver estado con banner\n  fokiz board                 Ver tablero (En progreso / Completado)\n  fokiz done <task_id>        Completar la fase activa de una tarea\n  fokiz surrender <task_id>   Rendirse en una tarea\n  fokiz help                  Mostrar esta ayuda\n",
     "cli_usage_done": "Uso: fokiz done <task_id>",
     "cli_usage_surrender": "Uso: fokiz surrender <task_id>",
     "cli_invalid_task_id": "task_id inválido: {task_id}",
@@ -128,7 +128,7 @@ EN_STRINGS = {
     "time_sec": "s",
     
     # CLI
-    "cli_usage": "Fokiz — Ulysses Pact\n\nUsage:\n  fokiz init                  Install Fokiz on this system\n  fokiz add                   Create a new contract\n  fokiz status                View status of all contracts\n  fokiz status --banner       View status with banner\n  fokiz done <task_id>        Complete the active phase of a task\n  fokiz surrender <task_id>   Surrender a task\n  fokiz help                  Show this help\n",
+    "cli_usage": "Fokiz — Ulysses Pact\n\nUsage:\n  fokiz init                  Install Fokiz on this system\n  fokiz add                   Create a new contract\n  fokiz status                View in-progress tasks\n  fokiz status --complete     View completed tasks\n  fokiz status --banner       View status with banner\n  fokiz board                 View task board (In-progress / Completed)\n  fokiz done <task_id>        Complete the active phase of a task\n  fokiz surrender <task_id>   Surrender a task\n  fokiz help                  Show this help\n",
     "cli_usage_done": "Usage: fokiz done <task_id>",
     "cli_usage_surrender": "Usage: fokiz surrender <task_id>",
     "cli_invalid_task_id": "Invalid task_id: {task_id}",

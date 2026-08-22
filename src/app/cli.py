@@ -49,8 +49,13 @@ def main() -> int:
 
         elif cmd == "status":
             show_banner = "--banner" in args
+            show_completed = "--complete" in args or "--completed" in args
             from .commands import cmd_status
-            return cmd_status(show_banner=show_banner)
+            return cmd_status(show_banner=show_banner, show_completed=show_completed)
+
+        elif cmd == "board":
+            from .commands import cmd_board
+            return cmd_board()
 
         elif cmd == "done":
             if len(args) < 2:
