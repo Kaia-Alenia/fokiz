@@ -22,6 +22,12 @@ from pathlib import Path
 SCRIPT_DIR_TMP = Path(__file__).parent.resolve()
 sys.path.insert(0, str(SCRIPT_DIR_TMP / 'src'))
 from app.i18n import _  # type: ignore
+from app.templates import (
+    SERVICE_TEMPLATE,
+    TIMER_TEMPLATE,
+    FOKIZ_WRAPPER_TEMPLATE,
+    MONITOR_WRAPPER_TEMPLATE,
+)
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -31,41 +37,6 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 SYSTEMD_USER_DIR = Path.home() / ".config" / "systemd" / "user"
 
 PYTHON = shutil.which("python3") or sys.executable
-MONITOR_PATH = SCRIPT_DIR / "src" / "monitor.py"
-
-# ---------------------------------------------------------------------------
-# Unit templates
-# ---------------------------------------------------------------------------
-
-SERVICE_UNIT = dedent(f"""\
-    [Unit]
-    Description=Fokiz — Episodic Monitor for Ulysses Contract
-    Documentation=https://github.com/aleniastudios/fokiz
-    After=network.target
-
-    [Service]
-    Type=oneshot
-    ExecStart={PYTHON} {MONITOR_PATH}
-    WorkingDirectory={SCRIPT_DIR}
-    Environment=PYTHONUNBUFFERED=1
-    StandardOutput=journal
-    StandardError=journal
-""")
-
-TIMER_UNIT = dedent("""\
-    [Unit]
-    Description=Fokiz — Episodic Timer (60s)
-    After=graphical-session.target
-
-    [Timer]
-    OnBootSec=60s
-    OnUnitActiveSec=60s
-    Persistent=true
-    AccuracySec=10s
-
-    [Install]
-    WantedBy=timers.target
-""")
 
 # ---------------------------------------------------------------------------
 # Shell hook
@@ -91,14 +62,21 @@ def _run(cmd: list[str]) -> int:
 def install_systemd() -> bool:
     SYSTEMD_USER_DIR.mkdir(parents=True, exist_ok=True)
 
-    service_path = SYSTEMD_USER_DIR / "fokiz.service"
-    timer_path = SYSTEMD_USER_DIR / "fokiz.timer"
+    service_path = SYSTEMD_USER_DIR / "fokiz-monitor.service"
+    timer_path = SYSTEMD_USER_DIR / "fokiz-monitor.timer"
 
+    local_bin = Path.home() / ".local" / "bin"
+    monitor_bin = local_bin / "fokiz-monitor"
+    
     print(_("installer.service_path", path=service_path))
-    service_path.write_text(SERVICE_UNIT, encoding="utf-8")
+    service_content = SERVICE_TEMPLATE.format(
+        monitor_path=str(monitor_bin),
+        script_dir=str(SCRIPT_DIR)
+    )
+    service_path.write_text(service_content, encoding="utf-8")
 
     print(_("installer.timer_path", path=timer_path))
-    timer_path.write_text(TIMER_UNIT, encoding="utf-8")
+    timer_path.write_text(TIMER_TEMPLATE, encoding="utf-8")
 
     # Check if systemd --user is running
     if _run(["systemctl", "--user", "is-system-running", "--quiet"]) not in (0, 1):
@@ -109,10 +87,10 @@ def install_systemd() -> bool:
     _run(["systemctl", "--user", "daemon-reload"])
 
     print(_("init.systemd_enabling"))
-    _run(["systemctl", "--user", "enable", "fokiz.timer"])
+    _run(["systemctl", "--user", "enable", "fokiz-monitor.timer"])
 
     print(_("init.systemd_starting"))
-    rc = _run(["systemctl", "--user", "start", "fokiz.timer"])
+    rc = _run(["systemctl", "--user", "start", "fokiz-monitor.timer"])
 
     if rc == 0:
         print(_("init.systemd_active"))
@@ -135,20 +113,34 @@ def print_shell_hook_instructions() -> None:
 
 
 def install_cli_entrypoint() -> None:
-    """Create a fokiz wrapper in ~/.local/bin if not already present."""
+    """Create a fokiz wrapper and fokiz-monitor wrapper in ~/.local/bin if not already present."""
     local_bin = Path.home() / ".local" / "bin"
     local_bin.mkdir(parents=True, exist_ok=True)
 
+    # 1. fokiz CLI wrapper
     script = local_bin / "fokiz"
-    content = dedent(f"""\
-        #!/usr/bin/env bash
-        export PYTHONPATH="{SCRIPT_DIR}/src:$PYTHONPATH"
-        exec {PYTHON} -m app.cli "$@"
-    """)
-
+    content = FOKIZ_WRAPPER_TEMPLATE.format(
+        app_dir=str(SCRIPT_DIR),
+        script_dir=str(SCRIPT_DIR),
+        python_exec=PYTHON
+    )
     script.write_text(content, encoding="utf-8")
     script.chmod(0o755)
     print(_("installer.wrapper_ok", path=script))
+    
+    # 2. fokiz-monitor wrapper
+    monitor_script = local_bin / "fokiz-monitor"
+    monitor_py = SCRIPT_DIR / "src" / "monitor.py"
+    monitor_content = MONITOR_WRAPPER_TEMPLATE.format(
+        app_dir=str(SCRIPT_DIR),
+        script_dir=str(SCRIPT_DIR),
+        python_exec=PYTHON,
+        monitor_py_path=str(monitor_py)
+    )
+    monitor_script.write_text(monitor_content, encoding="utf-8")
+    monitor_script.chmod(0o755)
+    print(_("installer.wrapper_ok", path=monitor_script))
+
     if not script.exists():  # just in case
         print(_("installer.path_hint", path=local_bin))
 

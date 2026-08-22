@@ -95,7 +95,7 @@ def render_banner(size: str = "LARGE", width: int = BANNER_WIDTH) -> str:
 """
 
     logo = logo_large if size == "LARGE" else logo_small
-    
+
     # Center each line of the logo if a custom width is provided
     logo_lines = []
     for line in logo.strip('\n').split('\n'):
@@ -320,7 +320,7 @@ def render_board(active_tasks: list[str], completed_tasks: list[str]) -> str:
     TOTAL_WIDTH = COL_WIDTH * 2 + 1
     
     out = []
-    out.append(render_banner(size="LARGE", width=TOTAL_WIDTH))
+    out.append(render_banner(width=TOTAL_WIDTH))
     
     # Center text manually to avoid ANSI escape sequences interfering with format alignments
     hdr_left = _('board.in_progress').center(COL_WIDTH)

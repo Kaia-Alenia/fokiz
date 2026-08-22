@@ -15,6 +15,7 @@ import os
 import pathlib
 import secrets
 from enum import Enum
+from typing import Any
 
 from .constants import SECRET_PATH, SECRET_SIZE_BYTES, HMAC_VERSION, PERM_SECRET
 from .errors import IntegrityKeyMissingError, ContractTamperedError
@@ -68,13 +69,22 @@ def build_canonical_payload(
     total_phases: int,
     created_at: str,
     deadline: str,
+    status: str,
+    completed_at: str | None,
+    surrender_reason: str | None,
     phases: list[dict],
 ) -> bytes:
     """
     Build the canonical byte payload for HMAC signing.
 
+    Field Classification:
+    - Immutable task fields: task_id, title, objective, total_days, total_phases, created_at, deadline
+    - Mutable task fields (audit/state): status, completed_at, surrender_reason
+    - Immutable phase fields: number, title, instructions, target_deadline
+    - Mutable phase fields (audit/state): status, completed_at, completion_log
+
     Format (text/plain, UTF-8):
-      version=1
+      version=2
       task_id=<id>
       title=<title>
       objective=<objective>
@@ -82,13 +92,20 @@ def build_canonical_payload(
       total_phases=<total_phases>
       created_at=<created_at>
       deadline=<deadline>
+      status=<status>
+      completed_at=<completed_at>
+      surrender_reason=<surrender_reason>
       phase[1].number=<number>
       phase[1].title=<title>
       phase[1].instructions=<instructions>
       phase[1].target_deadline=<deadline>
+      phase[1].status=<status>
+      phase[1].completed_at=<completed_at>
+      phase[1].completion_log=<completion_log>
       ...
 
     Phases must be sorted by phase_number before serializing.
+    None values for optional fields are serialized as empty strings.
     """
     lines: list[str] = [
         f"version={HMAC_VERSION}",
@@ -99,6 +116,9 @@ def build_canonical_payload(
         f"total_phases={total_phases}",
         f"created_at={created_at}",
         f"deadline={deadline}",
+        f"status={status}",
+        f"completed_at={completed_at or ''}",
+        f"surrender_reason={surrender_reason or ''}",
     ]
 
     sorted_phases = sorted(phases, key=lambda p: int(p["phase_number"]))
@@ -108,6 +128,9 @@ def build_canonical_payload(
         lines.append(f"phase[{n}].title={ph['title']}")
         lines.append(f"phase[{n}].instructions={ph['instructions']}")
         lines.append(f"phase[{n}].target_deadline={ph['target_deadline']}")
+        lines.append(f"phase[{n}].status={ph.get('status', 'PENDING')}")
+        lines.append(f"phase[{n}].completed_at={ph.get('completed_at') or ''}")
+        lines.append(f"phase[{n}].completion_log={ph.get('completion_log') or ''}")
 
     return "\n".join(lines).encode("utf-8")
 
@@ -139,6 +162,47 @@ def verify_hmac(
 # High-level contract verification
 # ---------------------------------------------------------------------------
 
+def recompute_hmac(
+    task: "sqlite3.Row",
+    phases: list["sqlite3.Row"],
+    task_overrides: dict[str, Any] | None = None,
+    phase_overrides: dict[int, dict[str, Any]] | None = None,
+    secret_path: pathlib.Path = SECRET_PATH,
+) -> str:
+    """
+    Compute a new HMAC for a task and its phases, applying overrides.
+    This is used during authorized state transitions to generate the new signature.
+    """
+    if not secret_path.exists():
+        raise IntegrityKeyMissingError()
+
+    task_dict = dict(task)
+    if task_overrides:
+        task_dict.update(task_overrides)
+
+    phases_dicts = []
+    for ph in phases:
+        ph_dict = dict(ph)
+        if phase_overrides and ph_dict["phase_number"] in phase_overrides:
+            ph_dict.update(phase_overrides[ph_dict["phase_number"]])
+        phases_dicts.append(ph_dict)
+
+    payload = build_canonical_payload(
+        task_id=task_dict["id"],
+        title=task_dict["title"],
+        objective=task_dict["objective"],
+        total_days=task_dict["total_days"],
+        total_phases=task_dict["total_phases"],
+        created_at=task_dict["created_at"],
+        deadline=task_dict["deadline"],
+        status=task_dict["status"],
+        completed_at=task_dict["completed_at"],
+        surrender_reason=task_dict["surrender_reason"],
+        phases=phases_dicts,
+    )
+    return compute_hmac(payload, secret_path)
+
+
 def check_contract_integrity(
     task: "sqlite3.Row",
     phases: list["sqlite3.Row"],
@@ -157,6 +221,9 @@ def check_contract_integrity(
             "title": ph["title"],
             "instructions": ph["instructions"],
             "target_deadline": ph["target_deadline"],
+            "status": ph["status"],
+            "completed_at": ph["completed_at"],
+            "completion_log": ph["completion_log"],
         }
         for ph in phases
     ]
@@ -169,6 +236,9 @@ def check_contract_integrity(
         total_phases=task["total_phases"],
         created_at=task["created_at"],
         deadline=task["deadline"],
+        status=task["status"],
+        completed_at=task["completed_at"],
+        surrender_reason=task["surrender_reason"],
         phases=phases_dicts,
     )
 

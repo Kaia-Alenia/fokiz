@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from ..time_utils import _utcnow_iso
 from ..anti_cheat import validate_completion_log
 from ..config import load_config, save_config
 from ..constants import (
@@ -53,6 +54,7 @@ from ..integrity import (
     compute_hmac,
     generate_secret,
     assert_contract_ok,
+    recompute_hmac,
 )
 from ..math_engine import (
     Zone,
@@ -108,8 +110,9 @@ def cmd_surrender(task_id: int) -> int:
         ui.print_error(_("surrender.reason_too_short", min_chars=SURRENDER_REASON_MIN))
         return 1
 
+    now_iso = _utcnow_iso()
     try:
-        db.surrender_task(task_id, reason)
+        db.surrender_task(task_id, reason, now_iso)
     except FokizError as e:
         ui.print_error(str(e))
         return 1

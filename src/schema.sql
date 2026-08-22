@@ -11,7 +11,7 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS user_config (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     nickname TEXT NOT NULL,
-    timezone TEXT NOT NULL DEFAULT 'America/Mexico_City',
+    timezone TEXT NOT NULL,
     max_active_slots INTEGER NOT NULL DEFAULT 3,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -70,17 +70,17 @@ CREATE TABLE IF NOT EXISTS integrity_log (
 
 CREATE TRIGGER IF NOT EXISTS abort_task_contract_update
 BEFORE UPDATE OF title, objective, deadline, created_at, total_days,
-total_phases, integrity_hash ON tasks
+total_phases ON tasks
 BEGIN
     SELECT RAISE(ABORT,
-        'Fokiz Error: Contrato inmutable. El pacto no se puede modificar.');
+        'Fokiz: immutable task contract field');
 END;
 
 CREATE TRIGGER IF NOT EXISTS abort_task_delete
 BEFORE DELETE ON tasks
 BEGIN
     SELECT RAISE(ABORT,
-        'Fokiz Error: Prohibido borrar tareas. Termina o ríndete.');
+        'Fokiz: immutable task deletion');
 END;
 
 -- ---------------------------------------------------------------------------
@@ -92,14 +92,14 @@ BEFORE UPDATE OF task_id, phase_number, title, instructions, target_deadline
 ON task_phases
 BEGIN
     SELECT RAISE(ABORT,
-        'Fokiz Error: La fase contractual es inmutable.');
+        'Fokiz: immutable phase contract field');
 END;
 
 CREATE TRIGGER IF NOT EXISTS abort_phase_delete
 BEFORE DELETE ON task_phases
 BEGIN
     SELECT RAISE(ABORT,
-        'Fokiz Error: Prohibido borrar fases.');
+        'Fokiz: immutable phase deletion');
 END;
 
 -- ---------------------------------------------------------------------------
@@ -111,7 +111,7 @@ END;
 CREATE TRIGGER IF NOT EXISTS guard_task_status_transition
 BEFORE UPDATE OF status ON tasks
 BEGIN
-    SELECT RAISE(ABORT, 'Fokiz Error: Transición de estado inválida.')
+    SELECT RAISE(ABORT, 'Fokiz: invalid task state transition')
     WHERE NOT (
         -- ACTIVE -> COMPLETED
         (OLD.status = 'ACTIVE' AND NEW.status = 'COMPLETED')
@@ -132,7 +132,7 @@ END;
 CREATE TRIGGER IF NOT EXISTS guard_phase_status_transition
 BEFORE UPDATE OF status ON task_phases
 BEGIN
-    SELECT RAISE(ABORT, 'Fokiz Error: Transición de fase inválida.')
+    SELECT RAISE(ABORT, 'Fokiz: invalid phase state transition')
     WHERE NOT (
         (OLD.status = 'PENDING' AND NEW.status = 'COMPLETED')
         OR

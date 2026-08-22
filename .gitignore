@@ -56,3 +56,4 @@ src/.monitor_state
 *.db
 *.sqlite3
 basura/
+.git_corrupted/

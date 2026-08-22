@@ -52,6 +52,34 @@ class ContractImmutableError(FokizError):
         super().__init__(msg)
 
 
+class ImmutableTaskDeletionError(FokizError):
+    code = "IMMUTABLE_TASK_DELETION"
+
+    def __init__(self) -> None:
+        super().__init__(_("error.immutable_deletion_task"))
+
+
+class ImmutablePhaseDeletionError(FokizError):
+    code = "IMMUTABLE_PHASE_DELETION"
+
+    def __init__(self) -> None:
+        super().__init__(_("error.immutable_deletion_phase"))
+
+
+class ImmutableTaskFieldError(FokizError):
+    code = "IMMUTABLE_TASK_FIELD"
+
+    def __init__(self) -> None:
+        super().__init__(_("error.immutable_task_field"))
+
+
+class ImmutablePhaseFieldError(FokizError):
+    code = "IMMUTABLE_PHASE_FIELD"
+
+    def __init__(self) -> None:
+        super().__init__(_("error.immutable_phase_field"))
+
+
 # ---------------------------------------------------------------------------
 # State errors
 # ---------------------------------------------------------------------------
@@ -62,6 +90,22 @@ class InvalidTransitionError(FokizError):
 
     def __init__(self, from_state: str, to_state: str) -> None:
         super().__init__(_("error.invalid_transition", f=from_state, t=to_state))
+
+
+class InvalidTaskTransitionTriggerError(FokizError):
+    """Raised when SQLite blocks task state transition."""
+    code = "INVALID_TASK_TRANSITION_TRIGGER"
+
+    def __init__(self) -> None:
+        super().__init__(_("error.invalid_task_transition"))
+
+
+class InvalidPhaseTransitionTriggerError(FokizError):
+    """Raised when SQLite blocks phase state transition."""
+    code = "INVALID_PHASE_TRANSITION_TRIGGER"
+
+    def __init__(self) -> None:
+        super().__init__(_("error.invalid_phase_transition"))
 
 
 class TaskNotFoundError(FokizError):

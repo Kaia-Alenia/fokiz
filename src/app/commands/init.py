@@ -54,7 +54,7 @@ from ..integrity import (
     generate_secret,
     assert_contract_ok,
 )
-from ..math_engine import (
+from .. math_engine import (
     Zone,
     compute_delta,
     compute_i_spam,
@@ -65,64 +65,15 @@ from ..math_engine import (
 )
 from .. import ui
 from ..messages import get_delta_label, pick_message, urgency_label
+from ..templates import (
+    SERVICE_TEMPLATE,
+    TIMER_TEMPLATE,
+    FOKIZ_WRAPPER_TEMPLATE,
+    MONITOR_WRAPPER_TEMPLATE,
+)
 
 log = logging.getLogger(__name__)
 
-
-# ---------------------------------------------------------------------------
-# SYSTEMD UNIT TEMPLATES
-# ---------------------------------------------------------------------------
-
-_SERVICE_TEMPLATE = """\
-[Unit]
-Description=Fokiz Task Monitor and Procrastination Engine
-After=graphical-session.target
-
-[Service]
-Type=oneshot
-ExecStart={monitor_path}
-StandardOutput=null
-StandardError=journal
-"""
-
-_TIMER_TEMPLATE = """\
-[Unit]
-Description=Fokiz 1-Minute Evaluation Timer
-
-[Timer]
-OnBootSec=1m
-OnUnitActiveSec=1m
-Persistent=true
-
-[Install]
-WantedBy=timers.target
-"""
-
-_FOKIZ_WRAPPER = """\
-#!/usr/bin/env bash
-# Fokiz CLI wrapper
-FOKIZ_APP="{app_dir}"
-exec python3 "$FOKIZ_APP/cli.py" "$@"
-"""
-
-_MONITOR_WRAPPER = """\
-#!/usr/bin/env bash
-# Fokiz monitor wrapper
-FOKIZ_APP="{app_dir}"
-exec python3 "{monitor_path}" "$@"
-"""
-
-
-# ---------------------------------------------------------------------------
-# Helper: parse UTC iso string → datetime
-# ---------------------------------------------------------------------------
-
-def _parse_utc(iso: str) -> datetime:
-    return datetime.strptime(iso, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
-
-
-def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 # ---------------------------------------------------------------------------
@@ -187,7 +138,7 @@ def _prompt_iana_timezone() -> str:
     Keeps asking until the user provides a string accepted by ZoneInfo.
     Returns the validated IANA string.
     """
-    from .constants import DEFAULT_TIMEZONE
+    from ..constants import DEFAULT_TIMEZONE
     while True:
         tz_input = ui.prompt(
             _("init.timezone_prompt"),
@@ -206,7 +157,7 @@ def _prompt_iana_timezone() -> str:
 
 def cmd_init() -> int:
     """fokiz init — install Fokiz on this system."""
-    print(ui.render_banner(size="LARGE"))
+    print(ui.render_banner())
     ui.print_section(_("init.title"))
 
     # 1. Platform check
@@ -331,22 +282,29 @@ def cmd_init() -> int:
 
 
 def _install_wrappers() -> None:
-    src_app = Path(__file__).parent
+    src_app = Path(__file__).resolve().parents[3]
+    python_exec = shutil.which("python3") or sys.executable
 
     fokiz_bin = FOKIZ_BIN_DIR / "fokiz"
     fokiz_monitor_bin = FOKIZ_BIN_DIR / "fokiz-monitor"
-    monitor_py = FOKIZ_DATA_DIR / "monitor.py"
+    monitor_py = src_app / "src" / "monitor.py"
 
     fokiz_bin.write_text(
-        _FOKIZ_WRAPPER.format(app_dir=str(src_app)),
+        FOKIZ_WRAPPER_TEMPLATE.format(
+            app_dir=str(src_app),
+            script_dir=str(src_app),
+            python_exec=python_exec
+        ),
         encoding="utf-8",
     )
     fokiz_bin.chmod(0o755)
 
     fokiz_monitor_bin.write_text(
-        _MONITOR_WRAPPER.format(
+        MONITOR_WRAPPER_TEMPLATE.format(
             app_dir=str(src_app),
-            monitor_path=str(monitor_py),
+            script_dir=str(src_app),
+            python_exec=python_exec,
+            monitor_py_path=str(monitor_py),
         ),
         encoding="utf-8",
     )
@@ -355,14 +313,18 @@ def _install_wrappers() -> None:
 
 
 def _install_systemd() -> None:
+    src_app = Path(__file__).resolve().parents[3]
     monitor_bin = FOKIZ_BIN_DIR / "fokiz-monitor"
-    service_content = _SERVICE_TEMPLATE.format(monitor_path=str(monitor_bin))
+    service_content = SERVICE_TEMPLATE.format(
+        monitor_path=str(monitor_bin),
+        script_dir=str(src_app)
+    )
 
     service_path = SYSTEMD_USER_DIR / "fokiz-monitor.service"
     timer_path = SYSTEMD_USER_DIR / "fokiz-monitor.timer"
 
     service_path.write_text(service_content, encoding="utf-8")
-    timer_path.write_text(_TIMER_TEMPLATE, encoding="utf-8")
+    timer_path.write_text(TIMER_TEMPLATE, encoding="utf-8")
     ui.print_success(_("init.systemd_units_installed"))
 
 

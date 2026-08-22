@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from ..time_utils import _parse_utc, _utcnow_iso
 from ..anti_cheat import validate_completion_log
 from ..config import load_config, save_config
 from ..constants import (
@@ -53,6 +54,7 @@ from ..integrity import (
     compute_hmac,
     generate_secret,
     assert_contract_ok,
+    recompute_hmac,
 )
 from ..math_engine import (
     Zone,
@@ -145,23 +147,41 @@ def cmd_done(task_id: int) -> int:
 
     # Complete phase
     now_iso = _utcnow_iso()
+    phase_overrides = {
+        active_phase["phase_number"]: {
+            "status": "COMPLETED",
+            "completed_at": now_iso,
+            "completion_log": log_text,
+        }
+    }
+    
+    # Check if all phases are done
+    updated_phases = [dict(ph) for ph in phases]
+    for ph in updated_phases:
+        if ph["phase_number"] == active_phase["phase_number"]:
+            ph["status"] = "COMPLETED"
+            ph["completed_at"] = now_iso
+            ph["completion_log"] = log_text
+
+    all_done = all(ph["status"] == "COMPLETED" for ph in updated_phases)
+    
+    task_overrides = {}
+    if all_done:
+        task_overrides["status"] = "COMPLETED"
+        task_overrides["completed_at"] = now_iso
+
     try:
-        db.complete_phase(task_id, active_phase["phase_number"], log_text, now_iso)
+        if all_done:
+            db.complete_phase_and_task(task_id, active_phase["phase_number"], log_text, now_iso)
+        else:
+            db.complete_phase(task_id, active_phase["phase_number"], log_text, now_iso)
     except FokizError as e:
         ui.print_error(str(e))
         return 1
 
     ui.print_success(_("done.phase_completed", phase_number=active_phase['phase_number']))
 
-    # Check if all phases are done
-    updated_phases = db.get_phases(task_id)
-    all_done = all(ph["status"] == "COMPLETED" for ph in updated_phases)
     if all_done:
-        try:
-            db.complete_task(task_id, now_iso)
-        except FokizError as e:
-            ui.print_error(str(e))
-            return 1
         ui.print_success(_("done.project_completed", task_id=task_id))
     else:
         remaining = [ph for ph in updated_phases if ph["status"] == "PENDING"]

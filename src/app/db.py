@@ -16,6 +16,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import Generator, Any
 
+from .time_utils import _utcnow_iso
 from .constants import DB_PATH, PERM_DB
 from .constants import MAX_ACTIVE_SLOTS
 from .errors import (
@@ -26,6 +27,12 @@ from .errors import (
     NoActivePhaseError,
     ContractImmutableError,
     MaxSlotsError,
+    ImmutableTaskDeletionError,
+    ImmutablePhaseDeletionError,
+    ImmutableTaskFieldError,
+    ImmutablePhaseFieldError,
+    InvalidTaskTransitionTriggerError,
+    InvalidPhaseTransitionTriggerError,
 )
 
 
@@ -47,6 +54,23 @@ def _connect(path: pathlib.Path = DB_PATH) -> sqlite3.Connection:
     return conn
 
 
+def _handle_sqlite_error(e: sqlite3.Error) -> None:
+    msg = str(e)
+    if "immutable task deletion" in msg:
+        raise ImmutableTaskDeletionError() from e
+    if "immutable phase deletion" in msg:
+        raise ImmutablePhaseDeletionError() from e
+    if "immutable task contract field" in msg:
+        raise ImmutableTaskFieldError() from e
+    if "immutable phase contract field" in msg:
+        raise ImmutablePhaseFieldError() from e
+    if "invalid task state transition" in msg:
+        raise InvalidTaskTransitionTriggerError() from e
+    if "invalid phase state transition" in msg:
+        raise InvalidPhaseTransitionTriggerError() from e
+    raise e
+
+
 @contextmanager
 def get_connection(path: pathlib.Path = DB_PATH) -> Generator[sqlite3.Connection, None, None]:
     """Yield an open connection; caller owns transaction lifecycle."""
@@ -55,6 +79,8 @@ def get_connection(path: pathlib.Path = DB_PATH) -> Generator[sqlite3.Connection
     conn = _connect(path)
     try:
         yield conn
+    except sqlite3.Error as e:
+        _handle_sqlite_error(e)
     finally:
         conn.close()
 
@@ -69,6 +95,9 @@ def immediate_transaction(path: pathlib.Path = DB_PATH) -> Generator[sqlite3.Con
         conn.execute("BEGIN IMMEDIATE;")
         yield conn
         conn.execute("COMMIT;")
+    except sqlite3.Error as e:
+        conn.execute("ROLLBACK;")
+        _handle_sqlite_error(e)
     except Exception:
         conn.execute("ROLLBACK;")
         raise
@@ -207,25 +236,14 @@ def finalize_task_hmac(
 ) -> None:
     """
     Update integrity_hash for a newly created task.
-    This bypasses the immutability trigger for the initial atomic creation.
     """
     with immediate_transaction(path) as conn:
-        conn.execute("DROP TRIGGER IF EXISTS abort_task_contract_update;")
         conn.execute(
             "UPDATE tasks SET integrity_hash = ? WHERE id = ?",
             (integrity_hash, task_id),
         )
-        conn.execute("""
-            CREATE TRIGGER IF NOT EXISTS abort_task_contract_update
-            BEFORE UPDATE OF title, objective, deadline, created_at, total_days,
-            total_phases, integrity_hash ON tasks
-            BEGIN
-                SELECT RAISE(ABORT,
-                    'Fokiz Error: Contrato inmutable. El pacto no se puede modificar.');
-            END;
-        """)
 
-def complete_task(task_id: int, completed_at: str, path: pathlib.Path = DB_PATH) -> None:
+def complete_task(task_id: int, completed_at: str, new_integrity_hash: str, path: pathlib.Path = DB_PATH) -> None:
     with immediate_transaction(path) as conn:
         row = conn.execute(
             "SELECT status FROM tasks WHERE id = ?", (task_id,)
@@ -235,32 +253,46 @@ def complete_task(task_id: int, completed_at: str, path: pathlib.Path = DB_PATH)
         if row["status"] != "ACTIVE":
             raise InvalidTransitionError(row["status"], "COMPLETED")
         conn.execute(
-            "UPDATE tasks SET status = 'COMPLETED', completed_at = ? WHERE id = ?",
-            (completed_at, task_id),
+            "UPDATE tasks SET status = 'COMPLETED', completed_at = ?, integrity_hash = ? WHERE id = ?",
+            (completed_at, new_integrity_hash, task_id),
         )
 
 
 def surrender_task(
     task_id: int,
     reason: str,
+    completed_at: str,
     path: pathlib.Path = DB_PATH,
 ) -> None:
+    from .integrity import recompute_hmac
     with immediate_transaction(path) as conn:
         row = conn.execute(
-            "SELECT status FROM tasks WHERE id = ?", (task_id,)
+            "SELECT * FROM tasks WHERE id = ?", (task_id,)
         ).fetchone()
         if row is None:
             raise TaskNotFoundError(task_id)
         if row["status"] != "ACTIVE":
             raise InvalidTransitionError(row["status"], "SURRENDERED")
-        now = _utcnow_iso()
+            
+        phases = conn.execute(
+            "SELECT * FROM task_phases WHERE task_id = ? ORDER BY phase_number",
+            (task_id,),
+        ).fetchall()
+        
+        task_overrides = {
+            "status": "SURRENDERED",
+            "completed_at": completed_at,
+            "surrender_reason": reason,
+        }
+        new_integrity_hash = recompute_hmac(row, phases, task_overrides, None)
+
         conn.execute(
             """
             UPDATE tasks
-            SET status = 'SURRENDERED', completed_at = ?, surrender_reason = ?
+            SET status = 'SURRENDERED', completed_at = ?, surrender_reason = ?, integrity_hash = ?
             WHERE id = ?
             """,
-            (now, reason, task_id),
+            (completed_at, reason, new_integrity_hash, task_id),
         )
 
 
@@ -328,18 +360,97 @@ def complete_phase(
     completed_at: str,
     path: pathlib.Path = DB_PATH,
 ) -> None:
+    from .integrity import recompute_hmac
     with immediate_transaction(path) as conn:
-        row = conn.execute(
+        row_task = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if row_task is None:
+            raise TaskNotFoundError(task_id)
+        if row_task["status"] != "ACTIVE":
+            raise InvalidTransitionError(row_task["status"], "COMPLETED")
+
+        phases = conn.execute(
+            "SELECT * FROM task_phases WHERE task_id = ? ORDER BY phase_number",
+            (task_id,),
+        ).fetchall()
+        
+        target_phase = None
+        for ph in phases:
+            if ph["phase_number"] == phase_number:
+                target_phase = ph
+                break
+                
+        if target_phase is None:
+            raise NoActivePhaseError(task_id)
+        if target_phase["status"] != "PENDING":
+            raise InvalidTransitionError(target_phase["status"], "COMPLETED")
+
+        phase_overrides = {
+            phase_number: {
+                "status": "COMPLETED",
+                "completed_at": completed_at,
+                "completion_log": log,
+            }
+        }
+        new_integrity_hash = recompute_hmac(row_task, phases, None, phase_overrides)
+
+        conn.execute(
             """
-            SELECT status FROM task_phases
+            UPDATE task_phases
+            SET status = 'COMPLETED', completed_at = ?, completion_log = ?
             WHERE task_id = ? AND phase_number = ?
             """,
-            (task_id, phase_number),
-        ).fetchone()
-        if row is None:
+            (completed_at, log, task_id, phase_number),
+        )
+        conn.execute(
+            "UPDATE tasks SET integrity_hash = ? WHERE id = ?",
+            (new_integrity_hash, task_id),
+        )
+
+
+def complete_phase_and_task(
+    task_id: int,
+    phase_number: int,
+    log: str,
+    completed_at: str,
+    path: pathlib.Path = DB_PATH,
+) -> None:
+    from .integrity import recompute_hmac
+    with immediate_transaction(path) as conn:
+        row_task = conn.execute("SELECT * FROM tasks WHERE id = ?", (task_id,)).fetchone()
+        if row_task is None:
+            raise TaskNotFoundError(task_id)
+        if row_task["status"] != "ACTIVE":
+            raise InvalidTransitionError(row_task["status"], "COMPLETED")
+
+        phases = conn.execute(
+            "SELECT * FROM task_phases WHERE task_id = ? ORDER BY phase_number",
+            (task_id,),
+        ).fetchall()
+        
+        target_phase = None
+        for ph in phases:
+            if ph["phase_number"] == phase_number:
+                target_phase = ph
+                break
+                
+        if target_phase is None:
             raise NoActivePhaseError(task_id)
-        if row["status"] != "PENDING":
-            raise InvalidTransitionError(row["status"], "COMPLETED")
+        if target_phase["status"] != "PENDING":
+            raise InvalidTransitionError(target_phase["status"], "COMPLETED")
+
+        task_overrides = {
+            "status": "COMPLETED",
+            "completed_at": completed_at,
+        }
+        phase_overrides = {
+            phase_number: {
+                "status": "COMPLETED",
+                "completed_at": completed_at,
+                "completion_log": log,
+            }
+        }
+        new_integrity_hash = recompute_hmac(row_task, phases, task_overrides, phase_overrides)
+
         conn.execute(
             """
             UPDATE task_phases
@@ -349,6 +460,14 @@ def complete_phase(
             (completed_at, log, task_id, phase_number),
         )
 
+        conn.execute(
+            """
+            UPDATE tasks 
+            SET status = 'COMPLETED', completed_at = ?, integrity_hash = ? 
+            WHERE id = ?
+            """,
+            (completed_at, new_integrity_hash, task_id),
+        )
 
 # ---------------------------------------------------------------------------
 # Notifications
@@ -412,13 +531,6 @@ def log_integrity_event(
         # Integrity log failures must never crash the monitor
         pass
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _utcnow_iso() -> str:
-    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def db_exists(path: pathlib.Path = DB_PATH) -> bool:

@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
+from ..time_utils import _parse_utc
 from ..anti_cheat import validate_completion_log
 from ..config import load_config, save_config
 from ..constants import (
@@ -76,7 +77,7 @@ def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
         return 1
 
     if show_banner:
-        print(ui.render_banner(size="LARGE"))
+        print(ui.render_banner())
 
         user_config = db.get_user_config()
         if user_config:
