@@ -27,7 +27,7 @@ class IntegrityKeyMissingError(FokizError):
     code = "INTEGRITY_KEY_MISSING"
 
     def __init__(self) -> None:
-        super().__init__(_("err_integrity_key_missing"))
+        super().__init__(_("error.integrity_key_missing"))
 
 
 class ContractTamperedError(FokizError):
@@ -35,7 +35,7 @@ class ContractTamperedError(FokizError):
     code = "TAMPERED"
 
     def __init__(self, task_id: int | None = None) -> None:
-        msg = _("err_tampered")
+        msg = _("error.tampered")
         if task_id is not None:
             msg += f" (task_id={task_id})"
         super().__init__(msg)
@@ -46,7 +46,7 @@ class ContractImmutableError(FokizError):
     code = "CONTRACT_IMMUTABLE"
 
     def __init__(self, field: str = "") -> None:
-        msg = _("err_immutable")
+        msg = _("error.immutable")
         if field:
             msg += f" ({field})"
         super().__init__(msg)
@@ -61,7 +61,7 @@ class InvalidTransitionError(FokizError):
     code = "INVALID_TRANSITION"
 
     def __init__(self, from_state: str, to_state: str) -> None:
-        super().__init__(_("err_invalid_transition", f=from_state, t=to_state))
+        super().__init__(_("error.invalid_transition", f=from_state, t=to_state))
 
 
 class TaskNotFoundError(FokizError):
@@ -69,7 +69,7 @@ class TaskNotFoundError(FokizError):
     code = "TASK_NOT_FOUND"
 
     def __init__(self, task_id: int) -> None:
-        super().__init__(_("err_task_not_found", tid=task_id))
+        super().__init__(_("error.task_not_found", tid=task_id))
 
 
 class NoActivePhaseError(FokizError):
@@ -77,7 +77,7 @@ class NoActivePhaseError(FokizError):
     code = "NO_ACTIVE_PHASE"
 
     def __init__(self, task_id: int) -> None:
-        super().__init__(_("err_no_active_phase", tid=task_id))
+        super().__init__(_("error.no_active_phase", tid=task_id))
 
 
 class MaxSlotsError(FokizError):
@@ -85,7 +85,7 @@ class MaxSlotsError(FokizError):
     code = "MAX_SLOTS"
 
     def __init__(self, limit: int) -> None:
-        super().__init__(_("err_max_slots", limit=limit))
+        super().__init__(_("error.max_slots", limit=limit))
 
 
 class DatabaseMissingError(FokizError):
@@ -93,7 +93,7 @@ class DatabaseMissingError(FokizError):
     code = "DATABASE_MISSING"
 
     def __init__(self) -> None:
-        super().__init__(_("err_database_missing"))
+        super().__init__(_("error.database_missing"))
 
 
 class NotInitializedError(FokizError):
@@ -101,7 +101,7 @@ class NotInitializedError(FokizError):
     code = "NOT_INITIALIZED"
 
     def __init__(self) -> None:
-        super().__init__(_("err_not_initialized"))
+        super().__init__(_("error.not_initialized"))
 
 
 # ---------------------------------------------------------------------------
@@ -118,7 +118,7 @@ class AntiCheatError(FokizError):
     code = "ANTI_CHEAT"
 
     def __init__(self, reason: str) -> None:
-        super().__init__(_("err_anti_cheat", reason=reason))
+        super().__init__(_("error.anti_cheat", reason=reason))
 
 
 class EarlyCompletionError(FokizError):
@@ -126,7 +126,7 @@ class EarlyCompletionError(FokizError):
     code = "EARLY_COMPLETION"
 
     def __init__(self) -> None:
-        super().__init__(_("err_early_completion"))
+        super().__init__(_("error.early_completion"))
 
 
 # ---------------------------------------------------------------------------
@@ -138,7 +138,7 @@ class DependencyMissingError(FokizError):
     code = "DEPENDENCY_MISSING"
 
     def __init__(self, dep: str) -> None:
-        super().__init__(_("err_dependency_missing", dep=dep))
+        super().__init__(_("error.dependency_missing", dep=dep))
 
 
 class PresenceDetectionError(FokizError):
@@ -146,7 +146,7 @@ class PresenceDetectionError(FokizError):
     code = "PRESENCE_DETECTION_FAILED"
 
     def __init__(self, detail: str = "") -> None:
-        msg = _("err_presence_detection")
+        msg = _("error.presence_detection")
         if detail:
             msg += f" {detail}"
         super().__init__(msg)

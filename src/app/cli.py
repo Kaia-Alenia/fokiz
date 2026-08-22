@@ -24,7 +24,7 @@ def _setup_logging() -> None:
 
 
 def _usage() -> None:
-    print(_("cli_usage"))
+    print(_("cli.usage"))
 
 
 def main() -> int:
@@ -64,30 +64,30 @@ def main() -> int:
 
         elif cmd == "done":
             if len(args) < 2:
-                ui.print_error(_("cli_usage_done"))
+                ui.print_error(_("cli.usage_done"))
                 return 1
             try:
                 task_id = int(args[1])
             except ValueError:
-                ui.print_error(_("cli_invalid_task_id", task_id=args[1]))
+                ui.print_error(_("cli.invalid_task_id", task_id=args[1]))
                 return 1
             from .commands import cmd_done
             return cmd_done(task_id)
 
         elif cmd == "surrender":
             if len(args) < 2:
-                ui.print_error(_("cli_usage_surrender"))
+                ui.print_error(_("cli.usage_surrender"))
                 return 1
             try:
                 task_id = int(args[1])
             except ValueError:
-                ui.print_error(_("cli_invalid_task_id", task_id=args[1]))
+                ui.print_error(_("cli.invalid_task_id", task_id=args[1]))
                 return 1
             from .commands import cmd_surrender
             return cmd_surrender(task_id)
 
         else:
-            ui.print_error(_("cli_unknown_cmd", cmd=cmd))
+            ui.print_error(_("cli.unknown_cmd", cmd=cmd))
             _usage()
             return 1
 
@@ -99,7 +99,7 @@ def main() -> int:
         return 1
     except KeyboardInterrupt:
         print()
-        ui.print_info(_("cli_cancelled"))
+        ui.print_info(_("cli.cancelled"))
         return 130
 
 

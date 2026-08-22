@@ -323,8 +323,8 @@ def render_board(active_tasks: list[str], completed_tasks: list[str]) -> str:
     out.append(render_banner(size="LARGE", width=TOTAL_WIDTH))
     
     # Center text manually to avoid ANSI escape sequences interfering with format alignments
-    hdr_left = _('hdr_in_progress').center(COL_WIDTH)
-    hdr_right = _('hdr_completed').center(COL_WIDTH)
+    hdr_left = _('board.in_progress').center(COL_WIDTH)
+    hdr_right = _('board.completed').center(COL_WIDTH)
     out.append(f"{c_bold}{c_orange}{hdr_left}{c_reset}│{c_bold}{c_green}{hdr_right}{c_reset}")
     out.append("─" * COL_WIDTH + "┼" + "─" * COL_WIDTH)
     
