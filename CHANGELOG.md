@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-21
+### Changed
+- Updated Fokiz ASCII art to a new, compact design.
+- Fixed UI rendering for missing escape sequences.
+
 ## [0.3.0] - 2026-08-21
 ### Added
 - Multi-language support (English and Spanish) via `i18n.py`.
