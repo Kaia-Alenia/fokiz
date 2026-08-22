@@ -575,7 +575,7 @@ def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
                 tz = ZoneInfo("UTC")
             now_local = datetime.now(timezone.utc).astimezone(tz)
             print(f"  Local time : {now_local.strftime('%d/%m/%Y %H:%M')}")
-            print(f"  {_(\"status.timezone\")}     : {tz_str}")
+            print(f"  {_('status.timezone')}     : {tz_str}")
             print()
 
     tasks = db.get_all_tasks()

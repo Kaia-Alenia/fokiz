@@ -1,5 +1,4 @@
 """
-from .i18n import _
 ui.py — ANSI terminal rendering for Fokiz.
 Copyright (C) Alenia Studios — GNU GPL v3
 
@@ -204,10 +203,10 @@ def print_section(title: str) -> None:
 def print_tampered_warning(task_id: int) -> None:
     print(
         f"\n{_c(C.RED)}{_c(C.BOLD)}"
-        f"⚠ {_(\"integrity.tampered_header\", task_id=task_id)}"
+        f"⚠ {_('integrity.tampered_header', task_id=task_id)}"
         f"{_c(C.RESET)}\n"
-        f"  {_(\"integrity.hmac_mismatch\")}\n"
-        f"  {_(\"integrity.blocked\")}\n"
+        f"  {_('integrity.hmac_mismatch')}\n"
+        f"  {_('integrity.blocked')}\n"
     )
 
 
@@ -216,8 +215,8 @@ def print_key_missing_warning() -> None:
         f"\n{_c(C.RED)}{_c(C.BOLD)}"
         "\u26a0 INTEGRITY_KEY_MISSING"
         f"{_c(C.RESET)}\n"
-        f"  {_(\"integrity.key_missing\")}\n"
-        f"  {_(\"integrity.recover\")}\n"
+        f"  {_('integrity.key_missing')}\n"
+        f"  {_('integrity.recover')}\n"
     )
 
 
@@ -254,7 +253,7 @@ def prompt_int(text: str, minimum: int = 1, maximum: int | None = None) -> int:
 
 def confirm(text: str) -> bool:
     yes_vals = set(_("ui.yes_values").split(","))
-    answer = prompt(f"{text} {_(\"ui.confirm_yes_no\")}").lower().strip()
+    answer = prompt(f"{text} {_('ui.confirm_yes_no')}").lower().strip()
     return answer in yes_vals
 
 
@@ -286,7 +285,7 @@ def format_time_remaining(target_dt: datetime, now: datetime | None = None) -> s
         secs = abs(int(total_seconds))
         h, rem = divmod(secs, 3600)
         m, s = divmod(rem, 60)
-        return f"-{h:02d}h {m:02d}m {s:02d}s ({_(\"time.expired\")})"
+        return f"-{h:02d}h {m:02d}m {s:02d}s ({_('time.expired')})"
     secs = int(total_seconds)
     days, rem = divmod(secs, 86400)
     hours, rem = divmod(rem, 3600)

@@ -22,6 +22,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install pytest pytest-cov
         
+    - name: Syntax check (compileall)
+      run: |
+        python -m compileall -q src
+
     - name: Run tests
       run: |
         pytest tests/
