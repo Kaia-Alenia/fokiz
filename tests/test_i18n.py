@@ -35,3 +35,47 @@ def test_i18n_fallback_to_key():
     """
     set_language("es")
     assert _("nonexistent.key") == "nonexistent.key"
+
+import importlib
+import json
+import src.app.i18n
+
+def test_i18n_persistence(monkeypatch, tmp_path):
+    """
+    Verify that reloading the i18n module correctly picks up the persisted language
+    from config.json, and uses English as a safe default if invalid or missing.
+    """
+    monkeypatch.setattr("os.path.expanduser", lambda path: str(tmp_path) if path == "~" else path)
+    
+    config_dir = tmp_path / ".local" / "share" / "fokiz"
+    config_dir.mkdir(parents=True, exist_ok=True)
+    fake_config = config_dir / "config.json"
+    
+    # Save "es"
+    with open(fake_config, "w") as f:
+        json.dump({"language": "es"}, f)
+    
+    importlib.reload(src.app.i18n)
+    assert src.app.i18n.CURRENT_LANG == "es"
+    assert src.app.i18n._("cli.usage") == src.app.i18n.ES_STRINGS["cli.usage"]
+    
+    # Save "en"
+    with open(fake_config, "w") as f:
+        json.dump({"language": "en"}, f)
+        
+    importlib.reload(src.app.i18n)
+    assert src.app.i18n.CURRENT_LANG == "en"
+    assert src.app.i18n._("cli.usage") == src.app.i18n.EN_STRINGS["cli.usage"]
+    
+    # Save invalid
+    with open(fake_config, "w") as f:
+        json.dump({"language": "fr"}, f)
+        
+    importlib.reload(src.app.i18n)
+    assert src.app.i18n.CURRENT_LANG == "en"
+    
+    # Delete file
+    fake_config.unlink()
+    importlib.reload(src.app.i18n)
+    assert src.app.i18n.CURRENT_LANG == "en"
+

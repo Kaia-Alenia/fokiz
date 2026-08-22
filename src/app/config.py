@@ -14,6 +14,7 @@ _CONFIG_FILE = FOKIZ_DATA_DIR / "config.json"
 
 # Defaults applied when config.json is absent or a key is missing
 _DEFAULTS: dict[str, Any] = {
+    "language": "en",
     "timezone": DEFAULT_TIMEZONE,
     "max_active_slots": 3,
     "presence_fallback": "skip",   # "skip" | "assume_active"

@@ -10,7 +10,7 @@ RULES:
 """
 
 from __future__ import annotations
-from .i18n import _
+from .i18n import _, set_language
 
 import logging
 import os
@@ -928,7 +928,7 @@ def cmd_lang(lang_arg: str | None = None) -> int:
     data = dict(conf._data)
     
     if not lang_arg:
-        current_lang = data.get('lang', 'auto')
+        current_lang = data.get('language', 'en')
         print(_("lang.current", current_lang=current_lang))
         choice = ui.prompt(_("lang.select_prompt"))
         if choice.lower() in ("es", "en"):
@@ -941,7 +941,8 @@ def cmd_lang(lang_arg: str | None = None) -> int:
         ui.print_error(_("lang.invalid"))
         return 1
 
-    data["lang"] = lang_arg
+    data["language"] = lang_arg
     save_config(data)
+    set_language(lang_arg)
     ui.print_success(_("lang.changed", lang_arg=lang_arg))
     return 0

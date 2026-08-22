@@ -12,6 +12,7 @@ RULES:
 
 from __future__ import annotations
 
+import json
 import os
 
 # ---------------------------------------------------------------------------
@@ -22,7 +23,16 @@ _lang_file = os.path.join(
     os.path.expanduser("~"), ".local", "share", "fokiz", "config.json"
 )
 
-CURRENT_LANG: str = "es"  # default until config is loaded
+CURRENT_LANG: str = "en"  # safe default
+
+try:
+    if os.path.exists(_lang_file):
+        with open(_lang_file, "r", encoding="utf-8") as _f:
+            _data = json.load(_f)
+            if isinstance(_data, dict) and _data.get("language") in ("en", "es"):
+                CURRENT_LANG = _data["language"]
+except Exception:
+    pass
 
 
 def set_language(lang: str) -> None:
