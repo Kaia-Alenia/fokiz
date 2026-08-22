@@ -816,3 +816,32 @@ def cmd_board() -> int:
             
     print(ui.render_board(active_tasks, completed_tasks))
     return 0
+
+# ---------------------------------------------------------------------------
+# cmd_lang
+# ---------------------------------------------------------------------------
+
+def cmd_lang(lang_arg: str | None = None) -> int:
+    """fokiz lang [en|es] — change the language."""
+    _require_initialized()
+    conf = load_config()
+    data = dict(conf._data)
+    
+    if not lang_arg:
+        current_lang = data.get('lang', 'auto')
+        print(f"Idioma actual / Current language: {current_lang}")
+        choice = ui.prompt("Selecciona idioma / Select language (es / en)")
+        if choice.lower() in ("es", "en"):
+            lang_arg = choice.lower()
+        else:
+            ui.print_error("Idioma no válido / Invalid language.")
+            return 1
+            
+    if lang_arg not in ("es", "en"):
+        ui.print_error("Idioma no válido / Invalid language.")
+        return 1
+        
+    data["lang"] = lang_arg
+    save_config(data)
+    ui.print_success(f"Idioma cambiado a / Language changed to: {lang_arg}")
+    return 0

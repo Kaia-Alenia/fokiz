@@ -57,6 +57,11 @@ def main() -> int:
             from .commands import cmd_board
             return cmd_board()
 
+        elif cmd == "lang":
+            from .commands import cmd_lang
+            lang_arg = args[1] if len(args) > 1 else None
+            return cmd_lang(lang_arg)
+
         elif cmd == "done":
             if len(args) < 2:
                 ui.print_error(_("cli_usage_done"))
