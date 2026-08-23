@@ -134,12 +134,20 @@ def render_task_card(
     total_phases: int,
     deadline: str,
     time_remaining: str,
+    is_shame: bool = False,
 ) -> str:
-    color = _c(_zone_color(zone))
+    if is_shame:
+        color = _c(C.RED)
+        cyan = _c(C.RED)
+        bar_zone = Zone.EXPIRED
+    else:
+        color = _c(_zone_color(zone))
+        cyan = _c(C.CYAN)
+        bar_zone = zone
+        
     reset = _c(C.RESET)
     bold = _c(C.BOLD)
     dim = _c(C.DIM)
-    cyan = _c(C.CYAN)
 
     def _truncate(t: str, max_l: int) -> str:
         return t if len(t) <= max_l else t[:max_l-1] + "…"
@@ -147,7 +155,7 @@ def render_task_card(
     t_title = _truncate(title, 35)
     t_phase = _truncate(phase_label, 38)
     # Use progress bar width 26 to fit exactly within 55 columns (22 prefix + 26 bar + ~7 suffix = 55)
-    bar = render_progress_bar(tau if tau <= 1.0 else 1.0, width=25, zone=zone)
+    bar = render_progress_bar(tau if tau <= 1.0 else 1.0, width=25, zone=bar_zone)
     
     l_status = _("card.status").ljust(10)
     l_phase = _("card.phase").ljust(10)

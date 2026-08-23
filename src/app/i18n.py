@@ -238,6 +238,7 @@ ES_STRINGS: dict[str, str] = {
         "  fokiz done <task_id>        Completar la fase activa de una tarea\n"
         "  fokiz surrender <task_id>   Rendirse en una tarea\n"
         "  fokiz help                  Mostrar esta ayuda\n"
+        "  fokiz shame                 Ver el Muro de la Vergüenza\n"
     ),
     "cli.usage_done": "Uso: fokiz done <task_id>",
     "cli.usage_surrender": "Uso: fokiz surrender <task_id>",
@@ -529,6 +530,7 @@ EN_STRINGS: dict[str, str] = {
         "  fokiz done <task_id>        Complete the active phase of a task\n"
         "  fokiz surrender <task_id>   Surrender a task\n"
         "  fokiz help                  Show this help\n"
+        "  fokiz shame                 View the Wall of Shame\n"
     ),
     "cli.usage_done": "Usage: fokiz done <task_id>",
     "cli.usage_surrender": "Usage: fokiz surrender <task_id>",

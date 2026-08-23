@@ -101,6 +101,16 @@ def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
     else:
         tasks = [t for t in tasks if t["status"] == "COMPLETED"]
         
+    surrendered_count = db.count_surrendered_tasks()
+    if surrendered_count > 0:
+        print(f"{ui._c(ui.C.RED)}{ui._c(ui.C.BOLD)}Tareas perdidas : {surrendered_count}{ui._c(ui.C.RESET)}")
+
+    # We shouldn't show SURRENDERED tasks in the normal list unless explicitly requested.
+    # Actually, the requirement doesn't say if SURRENDERED show in `fokiz status`.
+    # Usually they should NOT, because they have their own board `fokiz shame`.
+    if not show_completed:
+        tasks = [t for t in tasks if t["status"] == "ACTIVE"]
+
     if not tasks:
         msg = _("status.no_tasks") if show_completed else _("status.no_active")
         ui.print_info(msg)

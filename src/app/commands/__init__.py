@@ -5,6 +5,7 @@ from .done import cmd_done
 from .surrender import cmd_surrender
 from .board import cmd_board
 from .lang import cmd_lang
+from .shame import cmd_shame
 
 __all__ = [
     "cmd_init",
@@ -14,4 +15,5 @@ __all__ = [
     "cmd_surrender",
     "cmd_board",
     "cmd_lang",
+    "cmd_shame",
 ]

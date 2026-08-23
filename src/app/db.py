@@ -185,6 +185,21 @@ def get_all_tasks(path: pathlib.Path = DB_PATH) -> list[sqlite3.Row]:
         ).fetchall()
 
 
+def get_surrendered_tasks(path: pathlib.Path = DB_PATH) -> list[sqlite3.Row]:
+    with get_connection(path) as conn:
+        return conn.execute(
+            "SELECT * FROM tasks WHERE status = 'SURRENDERED' ORDER BY created_at"
+        ).fetchall()
+
+
+def count_surrendered_tasks(path: pathlib.Path = DB_PATH) -> int:
+    with get_connection(path) as conn:
+        row = conn.execute(
+            "SELECT COUNT(*) AS c FROM tasks WHERE status = 'SURRENDERED'"
+        ).fetchone()
+    return row["c"] if row else 0
+
+
 def count_active_tasks(path: pathlib.Path = DB_PATH) -> int:
     with get_connection(path) as conn:
         row = conn.execute(

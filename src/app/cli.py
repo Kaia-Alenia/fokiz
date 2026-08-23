@@ -64,6 +64,10 @@ def main() -> int:
             from .commands import cmd_board
             return cmd_board()
 
+        elif cmd == "shame":
+            from .commands import cmd_shame
+            return cmd_shame()
+
         elif cmd == "lang":
             from .commands import cmd_lang
             lang_arg = args[1] if len(args) > 1 else None
