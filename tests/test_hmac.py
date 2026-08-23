@@ -243,57 +243,7 @@ class TestIntegrationHMAC(unittest.TestCase):
     def test_direct_sql_phase_status_mutation(self):
         self._tamper_and_check("UPDATE task_phases SET status = 'COMPLETED' WHERE task_id = ? AND phase_number = 1", (self.task_id,))
 
-    def test_v1_payload_migration_required(self):
-        import sqlite3
-        conn = sqlite3.connect(str(self.db_path), isolation_level=None)
-        conn.row_factory = sqlite3.Row
-        
-        # Manually compute a V1 hash and insert it
-        task = conn.execute("SELECT * FROM tasks WHERE id = ?", (self.task_id,)).fetchone()
-        phases = conn.execute("SELECT * FROM task_phases WHERE task_id = ?", (self.task_id,)).fetchall()
-        
-        from app.integrity import build_canonical_payload_v1, compute_hmac
-        payload_v1 = build_canonical_payload_v1(
-            task_id=task["id"], title=task["title"], objective=task["objective"],
-            total_days=task["total_days"], total_phases=task["total_phases"],
-            created_at=task["created_at"], deadline=task["deadline"],
-            phases=[dict(p) for p in phases]
-        )
-        hash_v1 = compute_hmac(payload_v1, self.secret_path)
-        
-        conn.execute("UPDATE tasks SET integrity_hash = ? WHERE id = ?", (hash_v1, self.task_id))
-        
-        task_v1 = conn.execute("SELECT * FROM tasks WHERE id = ?", (self.task_id,)).fetchone()
-        conn.close()
-        
-        status = check_contract_integrity(task_v1, phases, secret_path=self.secret_path)
-        self.assertEqual(status, IntegrityStatus.MIGRATION_REQUIRED)
 
-    def test_migration_required_blocks_mutation(self):
-        import sqlite3
-        conn = sqlite3.connect(str(self.db_path), isolation_level=None)
-        conn.row_factory = sqlite3.Row
-        
-        # Manually compute a V1 hash and insert it
-        task = conn.execute("SELECT * FROM tasks WHERE id = ?", (self.task_id,)).fetchone()
-        phases = conn.execute("SELECT * FROM task_phases WHERE task_id = ?", (self.task_id,)).fetchall()
-        
-        from app.integrity import build_canonical_payload_v1, compute_hmac, assert_contract_ok
-        from app.errors import ContractTamperedError
-        payload_v1 = build_canonical_payload_v1(
-            task_id=task["id"], title=task["title"], objective=task["objective"],
-            total_days=task["total_days"], total_phases=task["total_phases"],
-            created_at=task["created_at"], deadline=task["deadline"],
-            phases=[dict(p) for p in phases]
-        )
-        hash_v1 = compute_hmac(payload_v1, self.secret_path)
-        conn.execute("UPDATE tasks SET integrity_hash = ? WHERE id = ?", (hash_v1, self.task_id))
-        
-        task_v1 = conn.execute("SELECT * FROM tasks WHERE id = ?", (self.task_id,)).fetchone()
-        conn.close()
-        
-        with self.assertRaises(ContractTamperedError):
-            assert_contract_ok(task_v1, phases, secret_path=self.secret_path)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

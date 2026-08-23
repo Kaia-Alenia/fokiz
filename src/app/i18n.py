@@ -135,8 +135,6 @@ ES_STRINGS: dict[str, str] = {
     "status.no_tasks": "No hay tareas registradas.",
     "status.new_version": "\n\033[93m[i] Nueva versión de Fokiz disponible ({latest_version}).\033[0m",
     "status.task_not_active": "La tarea #{task_id} no está activa (estado: {status}).",
-    "migrate.no_tasks": "No hay tareas que requieran migración.",
-    "migrate.success": "Se migraron exitosamente {count} tarea(s) a HMAC V2.",
     "scheduler.secondary_summary": "[{title}] Fase {phase} — τ={tau} ({zone})",
     "scheduler.default_nickname": "Usuario",
 
@@ -206,7 +204,6 @@ ES_STRINGS: dict[str, str] = {
     "error.early_completion": "Completaste esta fase demasiado pronto. Confirma explícitamente que realmente la terminaste.",
     "error.dependency_missing": "Dependencia faltante: {dep}",
     "error.presence_detection": "No se pudo detectar la presencia del usuario.",
-    "error.migration_required": "El contrato usa formato V1 y requiere migración antes de modificarse. Ejecuta 'fokiz migrate'.",
     "error.scheduler_missing_timezone": "El scheduler no puede ejecutarse: se requiere una zona horaria explícita.",
     "error.scheduler_invalid_timezone": "El scheduler no puede ejecutarse: zona horaria inválida '{tz}'.",
 
@@ -237,7 +234,6 @@ ES_STRINGS: dict[str, str] = {
         "  fokiz status --complete     Ver tareas completadas\n"
         "  fokiz status --banner       Ver estado con banner\n"
         "  fokiz board                 Ver tablero (En progreso / Completado)\n"
-        "  fokiz migrate               Migrar contratos de V1 a V2\n"
         "  fokiz lang [es|en]          Cambiar el idioma de la interfaz\n"
         "  fokiz done <task_id>        Completar la fase activa de una tarea\n"
         "  fokiz surrender <task_id>   Rendirse en una tarea\n"
@@ -430,8 +426,6 @@ EN_STRINGS: dict[str, str] = {
     "status.no_tasks": "No tasks registered.",
     "status.new_version": "\n\033[93m[i] New Fokiz version available ({latest_version}).\033[0m",
     "status.task_not_active": "Task #{task_id} is not active (status: {status}).",
-    "migrate.no_tasks": "No tasks require migration.",
-    "migrate.success": "Successfully migrated {count} task(s) to HMAC V2.",
     "scheduler.secondary_summary": "[{title}] Phase {phase} — τ={tau} ({zone})",
     "scheduler.default_nickname": "User",
 
@@ -501,7 +495,6 @@ EN_STRINGS: dict[str, str] = {
     "error.early_completion": "You completed this phase too early. Confirm explicitly that you actually finished it.",
     "error.dependency_missing": "Missing dependency: {dep}",
     "error.presence_detection": "Could not detect user presence.",
-    "error.migration_required": "Contract uses V1 format and requires migration before mutation. Run 'fokiz migrate'.",
     "error.scheduler_missing_timezone": "Scheduler cannot run: explicit timezone is required.",
     "error.scheduler_invalid_timezone": "Scheduler cannot run: invalid timezone '{tz}'.",
 
@@ -532,7 +525,6 @@ EN_STRINGS: dict[str, str] = {
         "  fokiz status --complete     View completed tasks\n"
         "  fokiz status --banner       View status with banner\n"
         "  fokiz board                 View task board (In-progress / Completed)\n"
-        "  fokiz migrate               Migrate V1 contracts to V2 HMAC signatures\n"
         "  fokiz lang [es|en]          Change interface language\n"
         "  fokiz done <task_id>        Complete the active phase of a task\n"
         "  fokiz surrender <task_id>   Surrender a task\n"

@@ -11,6 +11,7 @@ RULES:
 
 from __future__ import annotations
 from ..i18n import _, set_language
+from ._guards import _require_initialized
 
 import logging
 import os
@@ -121,20 +122,4 @@ def cmd_surrender(task_id: int) -> int:
     ui.print_info(_("surrender.recorded"))
     return 0
 
-
-# ---------------------------------------------------------------------------
-# Guard
-# ---------------------------------------------------------------------------
-
-def _require_initialized() -> None:
-    if not DB_PATH.exists() or not SECRET_PATH.exists():
-        raise NotInitializedError()
-
-# ---------------------------------------------------------------------------
-# Guard
-# ---------------------------------------------------------------------------
-
-def _require_initialized() -> None:
-    if not DB_PATH.exists() or not SECRET_PATH.exists():
-        raise NotInitializedError()
 

@@ -11,6 +11,7 @@ RULES:
 
 from __future__ import annotations
 from ..i18n import _, set_language
+from ._guards import _require_initialized
 
 import logging
 import os
