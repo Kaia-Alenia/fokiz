@@ -35,6 +35,7 @@ from app.scheduler import compute_task_metrics, decide_dispatches, is_wakeup_bur
 from app.presence import get_presence
 from app.notifier import dispatch
 from app.math_engine import zone_urgency
+from app import i18n
 
 logging.basicConfig(
     level=logging.WARNING,
@@ -129,9 +130,8 @@ def run() -> None:
             # Still notify about tamper (fail-closed: keep notifying)
             try:
                 dispatch(
-                    title="⚠ Fokiz — Tampered Contract",
-                    body=f"Task #{task['id']} has compromised integrity. "
-                         "Contract operations blocked.",
+                    title=i18n._("monitor.tampered_title"),
+                    body=i18n._("monitor.tampered_body", task_id=task["id"]),
                     urgency="critical",
                     play_sound=False,
                 )
@@ -170,11 +170,11 @@ def run() -> None:
         # Find the matching task title
         task_title = next(
             (m.title for m in metrics_list if m.task_id == decision.task_id),
-            f"Tarea #{decision.task_id}",
+            i18n._("monitor.task_fallback", task_id=decision.task_id),
         )
         try:
             result = dispatch(
-                title=f"Fokiz — {task_title}",
+                title=i18n._("monitor.title_prefix", title=task_title),
                 body=decision.message,
                 urgency=decision.urgency,
                 play_sound=decision.play_audio,

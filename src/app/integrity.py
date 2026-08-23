@@ -144,9 +144,6 @@ def build_canonical_payload_v1(
     total_phases: int,
     created_at: str,
     deadline: str,
-    status: str,
-    completed_at: str | None,
-    surrender_reason: str | None,
     phases: list[dict],
 ) -> bytes:
     """
@@ -161,9 +158,6 @@ def build_canonical_payload_v1(
         f"total_phases={total_phases}",
         f"created_at={created_at}",
         f"deadline={deadline}",
-        f"status={status}",
-        f"completed_at={completed_at or ''}",
-        f"surrender_reason={surrender_reason or ''}",
     ]
 
     sorted_phases = sorted(phases, key=lambda p: int(p["phase_number"]))
@@ -173,9 +167,6 @@ def build_canonical_payload_v1(
         lines.append(f"phase[{n}].title={ph['title']}")
         lines.append(f"phase[{n}].instructions={ph['instructions']}")
         lines.append(f"phase[{n}].target_deadline={ph['target_deadline']}")
-        lines.append(f"phase[{n}].status={ph.get('status', 'PENDING')}")
-        lines.append(f"phase[{n}].completed_at={ph.get('completed_at') or ''}")
-        lines.append(f"phase[{n}].completion_log={ph.get('completion_log') or ''}")
 
     return "\n".join(lines).encode("utf-8")
 
@@ -304,9 +295,6 @@ def check_contract_integrity(
         total_phases=task["total_phases"],
         created_at=task["created_at"],
         deadline=task["deadline"],
-        status=task["status"],
-        completed_at=task["completed_at"],
-        surrender_reason=task["surrender_reason"],
         phases=phases_dicts,
     )
     if verify_hmac(payload_v1, task["integrity_hash"], secret_path):
@@ -340,5 +328,5 @@ def assert_contract_ok(
     status = check_contract_integrity(task, phases, secret_path)
     if status == IntegrityStatus.KEY_MISSING:
         raise IntegrityKeyMissingError()
-    if status == IntegrityStatus.TAMPERED:
+    if status in (IntegrityStatus.TAMPERED, IntegrityStatus.MIGRATION_REQUIRED):
         raise ContractTamperedError(task_id=task["id"])

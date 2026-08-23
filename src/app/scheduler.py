@@ -38,6 +38,7 @@ from .math_engine import (
 )
 from .presence import PresenceResult
 from .messages import pick_message, urgency_label
+from . import i18n
 
 log = logging.getLogger(__name__)
 
@@ -184,17 +185,17 @@ def decide_dispatches(
 
     from .db import get_user_config
     user_config = get_user_config()
-    nickname = user_config["nickname"] if user_config and "nickname" in user_config.keys() else "Usuario"
+    nickname = user_config["nickname"] if user_config and "nickname" in user_config.keys() else i18n._("scheduler.default_nickname")
     from .errors import ConfigurationError
     if not user_config or "timezone" not in user_config:
-        raise ConfigurationError("Scheduler cannot run: explicit timezone is required.")
+        raise ConfigurationError(i18n._("error.scheduler_missing_timezone"))
     tz_str = user_config["timezone"]
     
     import zoneinfo
     try:
         zone = zoneinfo.ZoneInfo(tz_str)
     except zoneinfo.ZoneInfoNotFoundError:
-        raise ConfigurationError(f"Scheduler cannot run: invalid timezone '{tz_str}'.")
+        raise ConfigurationError(i18n._("error.scheduler_invalid_timezone", tz=tz_str))
     local_time = now.astimezone(zone)
     local_hour = local_time.hour
 
@@ -230,7 +231,13 @@ def decide_dispatches(
     # Secondary tasks — only dispatch one consolidated summary per cycle
     for m in secondary:
         if cooldown_elapsed(m.last_notification_iso, m.i_spam_min, now):
-            msg = f"[{m.title}] Phase {m.phase_number} — τ={m.tau:.2f} ({m.zone.value})"
+            msg = i18n._(
+                "scheduler.secondary_summary",
+                title=m.title,
+                phase=m.phase_number,
+                tau=f"{m.tau:.2f}",
+                zone=m.zone.value,
+            )
             decisions.append(DispatchDecision(
                 should_dispatch=True,
                 task_id=m.task_id,

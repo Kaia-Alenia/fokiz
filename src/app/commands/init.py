@@ -164,7 +164,7 @@ def cmd_init() -> int:
         return 1
 
     # 2. Python version
-    if sys.version_info < (3, 8):
+    if sys.version_info < (3, 10):
         ui.print_error(_("init.python_required"))
         return 1
 

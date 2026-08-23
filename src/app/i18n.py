@@ -137,6 +137,8 @@ ES_STRINGS: dict[str, str] = {
     "status.task_not_active": "La tarea #{task_id} no está activa (estado: {status}).",
     "migrate.no_tasks": "No hay tareas que requieran migración.",
     "migrate.success": "Se migraron exitosamente {count} tarea(s) a HMAC V2.",
+    "scheduler.secondary_summary": "[{title}] Fase {phase} — τ={tau} ({zone})",
+    "scheduler.default_nickname": "Usuario",
 
     # --- Lang ---
     "lang.current": "Idioma actual: {current_lang}",
@@ -204,6 +206,9 @@ ES_STRINGS: dict[str, str] = {
     "error.early_completion": "Completaste esta fase demasiado pronto. Confirma explícitamente que realmente la terminaste.",
     "error.dependency_missing": "Dependencia faltante: {dep}",
     "error.presence_detection": "No se pudo detectar la presencia del usuario.",
+    "error.migration_required": "El contrato usa formato V1 y requiere migración antes de modificarse. Ejecuta 'fokiz migrate'.",
+    "error.scheduler_missing_timezone": "El scheduler no puede ejecutarse: se requiere una zona horaria explícita.",
+    "error.scheduler_invalid_timezone": "El scheduler no puede ejecutarse: zona horaria inválida '{tz}'.",
 
     # --- Anti-cheat ---
     "anti_cheat.garbage": "Contenido de relleno detectado.",
@@ -243,6 +248,12 @@ ES_STRINGS: dict[str, str] = {
     "cli.invalid_task_id": "task_id inválido: {task_id}",
     "cli.unknown_cmd": "Comando desconocido: {cmd}",
     "cli.cancelled": "Cancelado.",
+
+    # --- Monitor ---
+    "monitor.tampered_title": "⚠ Fokiz — Contrato Manipulado",
+    "monitor.tampered_body": "La tarea #{task_id} tiene la integridad comprometida. Operaciones bloqueadas.",
+    "monitor.task_fallback": "Tarea #{task_id}",
+    "monitor.title_prefix": "Fokiz — {title}",
 
     # --- Installer ---
     "installer.title": "  Fokiz — Instalador",
@@ -421,6 +432,8 @@ EN_STRINGS: dict[str, str] = {
     "status.task_not_active": "Task #{task_id} is not active (status: {status}).",
     "migrate.no_tasks": "No tasks require migration.",
     "migrate.success": "Successfully migrated {count} task(s) to HMAC V2.",
+    "scheduler.secondary_summary": "[{title}] Phase {phase} — τ={tau} ({zone})",
+    "scheduler.default_nickname": "User",
 
     # --- Lang ---
     "lang.current": "Current language: {current_lang}",
@@ -488,6 +501,9 @@ EN_STRINGS: dict[str, str] = {
     "error.early_completion": "You completed this phase too early. Confirm explicitly that you actually finished it.",
     "error.dependency_missing": "Missing dependency: {dep}",
     "error.presence_detection": "Could not detect user presence.",
+    "error.migration_required": "Contract uses V1 format and requires migration before mutation. Run 'fokiz migrate'.",
+    "error.scheduler_missing_timezone": "Scheduler cannot run: explicit timezone is required.",
+    "error.scheduler_invalid_timezone": "Scheduler cannot run: invalid timezone '{tz}'.",
 
     # --- Anti-cheat ---
     "anti_cheat.garbage": "Garbage content detected.",
@@ -527,6 +543,12 @@ EN_STRINGS: dict[str, str] = {
     "cli.invalid_task_id": "Invalid task_id: {task_id}",
     "cli.unknown_cmd": "Unknown command: {cmd}",
     "cli.cancelled": "Cancelled.",
+
+    # --- Monitor ---
+    "monitor.tampered_title": "⚠ Fokiz — Tampered Contract",
+    "monitor.tampered_body": "Task #{task_id} has compromised integrity. Contract operations blocked.",
+    "monitor.task_fallback": "Task #{task_id}",
+    "monitor.title_prefix": "Fokiz — {title}",
 
     # --- Installer ---
     "installer.title": "  Fokiz — Installer",
