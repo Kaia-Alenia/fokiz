@@ -39,7 +39,7 @@ from .constants import (
     OBJECTIVE_MIN, OBJECTIVE_MAX,
     PHASES_MIN, PHASES_MAX,
     DAYS_MIN,
-    DEFAULT_TIMEZONE,
+    DAYS_MIN,
 )
 from .errors import ValidationError
 from .i18n import _
@@ -258,7 +258,7 @@ def build_contract(
         total_phases:   number of phases.
         phase_inputs:   list of dicts with keys: title, instructions, days.
         created_at:     optional UTC datetime of creation (default: now).
-        user_timezone:  optional IANA timezone string (default: DEFAULT_TIMEZONE).
+        user_timezone:  IANA timezone string.
 
     Returns:
         A fully validated ContractSpec with absolute UTC deadlines.
@@ -281,9 +281,9 @@ def build_contract(
         phase_days.append(d)
     validate_phase_days_sum(phase_days, total_days)
 
-    # Timezone
-    tz_name = user_timezone or DEFAULT_TIMEZONE
-    tz = validate_iana_timezone(tz_name)
+    if not user_timezone:
+        raise ValidationError(_("contract.val_tz_unknown", tz="None"))
+    tz = validate_iana_timezone(user_timezone)
 
     # Creation timestamp (UTC, aware)
     if created_at is None:

@@ -7,15 +7,17 @@ import json
 import pathlib
 from typing import Any
 
-from .constants import FOKIZ_DATA_DIR, DEFAULT_TIMEZONE
+import zoneinfo
+
+from .constants import FOKIZ_DATA_DIR
+from .errors import ConfigurationError
+from .i18n import _
 
 
 _CONFIG_FILE = FOKIZ_DATA_DIR / "config.json"
 
-# Defaults applied when config.json is absent or a key is missing
 _DEFAULTS: dict[str, Any] = {
     "language": "en",
-    "timezone": DEFAULT_TIMEZONE,
     "max_active_slots": 3,
     "presence_fallback": "skip",   # "skip" | "assume_active"
     "audio_enabled": True,
@@ -59,6 +61,14 @@ def load_config() -> Config:
         except (json.JSONDecodeError, OSError):
             # Non-fatal: fall back to defaults
             pass
+
+    if "timezone" not in data:
+        raise ConfigurationError(_("error.config_missing_timezone"))
+        
+    try:
+        zoneinfo.ZoneInfo(data["timezone"])
+    except zoneinfo.ZoneInfoNotFoundError:
+        raise ConfigurationError(_("error.config_invalid_timezone", tz=data["timezone"]))
 
     _loaded = Config(data)
     return _loaded

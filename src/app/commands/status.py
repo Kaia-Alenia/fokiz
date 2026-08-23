@@ -81,11 +81,14 @@ def cmd_status(show_banner: bool = False, show_completed: bool = False) -> int:
 
         user_config = db.get_user_config()
         if user_config:
-            tz_str = user_config["timezone"] if "timezone" in user_config.keys() else "America/Mexico_City"
+            from ..errors import ConfigurationError
+            if "timezone" not in user_config.keys():
+                raise ConfigurationError(_("error.config_missing_timezone"))
+            tz_str = user_config["timezone"]
             try:
                 tz = ZoneInfo(tz_str)
-            except Exception:
-                tz = ZoneInfo("UTC")
+            except ZoneInfoNotFoundError:
+                raise ConfigurationError(_("error.config_invalid_timezone", tz=tz_str))
             now_local = datetime.now(timezone.utc).astimezone(tz)
             print(_("status.local_time", time=now_local.strftime('%d/%m/%Y %H:%M')))
             print(_("status.timezone_field", tz=tz_str))

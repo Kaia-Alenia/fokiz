@@ -30,6 +30,7 @@ class IntegrityStatus(Enum):
     TAMPERED = "TAMPERED"
     KEY_MISSING = "INTEGRITY_KEY_MISSING"
     NO_CONTRACT = "NO_CONTRACT"
+    MIGRATION_REQUIRED = "MIGRATION_REQUIRED"
 
 
 # ---------------------------------------------------------------------------
@@ -109,6 +110,50 @@ def build_canonical_payload(
     """
     lines: list[str] = [
         f"version={HMAC_VERSION}",
+        f"task_id={task_id}",
+        f"title={title}",
+        f"objective={objective}",
+        f"total_days={total_days}",
+        f"total_phases={total_phases}",
+        f"created_at={created_at}",
+        f"deadline={deadline}",
+        f"status={status}",
+        f"completed_at={completed_at or ''}",
+        f"surrender_reason={surrender_reason or ''}",
+    ]
+
+    sorted_phases = sorted(phases, key=lambda p: int(p["phase_number"]))
+    for ph in sorted_phases:
+        n = ph["phase_number"]
+        lines.append(f"phase[{n}].number={n}")
+        lines.append(f"phase[{n}].title={ph['title']}")
+        lines.append(f"phase[{n}].instructions={ph['instructions']}")
+        lines.append(f"phase[{n}].target_deadline={ph['target_deadline']}")
+        lines.append(f"phase[{n}].status={ph.get('status', 'PENDING')}")
+        lines.append(f"phase[{n}].completed_at={ph.get('completed_at') or ''}")
+        lines.append(f"phase[{n}].completion_log={ph.get('completion_log') or ''}")
+
+    return "\n".join(lines).encode("utf-8")
+
+
+def build_canonical_payload_v1(
+    task_id: int,
+    title: str,
+    objective: str,
+    total_days: int,
+    total_phases: int,
+    created_at: str,
+    deadline: str,
+    status: str,
+    completed_at: str | None,
+    surrender_reason: str | None,
+    phases: list[dict],
+) -> bytes:
+    """
+    Build the canonical byte payload for HMAC signing as it was in version 1.
+    """
+    lines: list[str] = [
+        "version=1",
         f"task_id={task_id}",
         f"title={title}",
         f"objective={objective}",
@@ -247,7 +292,40 @@ def check_contract_integrity(
     except IntegrityKeyMissingError:
         return IntegrityStatus.KEY_MISSING
 
-    return IntegrityStatus.OK if valid else IntegrityStatus.TAMPERED
+    if valid:
+        return IntegrityStatus.OK
+
+    # Try version 1 payload for migration
+    payload_v1 = build_canonical_payload_v1(
+        task_id=task["id"],
+        title=task["title"],
+        objective=task["objective"],
+        total_days=task["total_days"],
+        total_phases=task["total_phases"],
+        created_at=task["created_at"],
+        deadline=task["deadline"],
+        status=task["status"],
+        completed_at=task["completed_at"],
+        surrender_reason=task["surrender_reason"],
+        phases=phases_dicts,
+    )
+    if verify_hmac(payload_v1, task["integrity_hash"], secret_path):
+        return IntegrityStatus.MIGRATION_REQUIRED
+
+    return IntegrityStatus.TAMPERED
+
+
+def migrate_contract_to_v2(
+    task: "sqlite3.Row",
+    phases: list["sqlite3.Row"],
+    secret_path: pathlib.Path = SECRET_PATH,
+) -> str:
+    """
+    Generate a new HMAC signature for a V1 contract using V2 format.
+    Assumes the contract was already verified as MIGRATION_REQUIRED.
+    Returns the new signature.
+    """
+    return recompute_hmac(task, phases, secret_path=secret_path)
 
 
 def assert_contract_ok(

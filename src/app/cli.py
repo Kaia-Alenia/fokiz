@@ -69,6 +69,10 @@ def main() -> int:
             lang_arg = args[1] if len(args) > 1 else None
             return cmd_lang(lang_arg)
 
+        elif cmd == "migrate":
+            from .commands import cmd_migrate
+            return cmd_migrate()
+
         elif cmd == "done":
             if len(args) < 2:
                 ui.print_error(_("cli.usage_done"))

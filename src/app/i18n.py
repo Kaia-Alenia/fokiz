@@ -126,7 +126,7 @@ ES_STRINGS: dict[str, str] = {
     "init.dep_found": "{dep} — {desc}",
     "init.dep_missing": "{dep} no encontrado — {desc}",
 
-    # --- Status ---
+    # --- Status & Migrate ---
     "status.title": "Diagnóstico",
     "status.timezone": "Zona horaria",
     "status.local_time": "  Hora local : {time}",
@@ -135,6 +135,8 @@ ES_STRINGS: dict[str, str] = {
     "status.no_tasks": "No hay tareas registradas.",
     "status.new_version": "\n\033[93m[i] Nueva versión de Fokiz disponible ({latest_version}).\033[0m",
     "status.task_not_active": "La tarea #{task_id} no está activa (estado: {status}).",
+    "migrate.no_tasks": "No hay tareas que requieran migración.",
+    "migrate.success": "Se migraron exitosamente {count} tarea(s) a HMAC V2.",
 
     # --- Lang ---
     "lang.current": "Idioma actual: {current_lang}",
@@ -176,6 +178,8 @@ ES_STRINGS: dict[str, str] = {
     "integrity.recover": "Ejecuta 'fokiz init' para recuperar o reinicializar.",
 
     # --- Errors ---
+    "error.config_missing_timezone": "Falta la zona horaria (timezone) en el archivo de configuración.",
+    "error.config_invalid_timezone": "Zona horaria '{tz}' no válida en la configuración. Usa un identificador IANA (ej. America/Mexico_City).",
     "error.not_initialized": "Fokiz no está inicializado. Ejecuta 'fokiz init'.",
     "error.already_initialized": "Fokiz ya está inicializado.",
     "error.active_contract": "Ya existe un contrato activo.",
@@ -228,6 +232,7 @@ ES_STRINGS: dict[str, str] = {
         "  fokiz status --complete     Ver tareas completadas\n"
         "  fokiz status --banner       Ver estado con banner\n"
         "  fokiz board                 Ver tablero (En progreso / Completado)\n"
+        "  fokiz migrate               Migrar contratos de V1 a V2\n"
         "  fokiz lang [es|en]          Cambiar el idioma de la interfaz\n"
         "  fokiz done <task_id>        Completar la fase activa de una tarea\n"
         "  fokiz surrender <task_id>   Rendirse en una tarea\n"
@@ -405,7 +410,7 @@ EN_STRINGS: dict[str, str] = {
     "init.systemd_timer_activated": "systemd timer activated.",
     "init.diag_not_found": "{name} — not found",
 
-    # --- Status ---
+    # --- Status & Migrate ---
     "status.title": "Diagnostics",
     "status.timezone": "Timezone",
     "status.local_time": "  Local time : {time}",
@@ -414,6 +419,8 @@ EN_STRINGS: dict[str, str] = {
     "status.no_tasks": "No tasks registered.",
     "status.new_version": "\n\033[93m[i] New Fokiz version available ({latest_version}).\033[0m",
     "status.task_not_active": "Task #{task_id} is not active (status: {status}).",
+    "migrate.no_tasks": "No tasks require migration.",
+    "migrate.success": "Successfully migrated {count} task(s) to HMAC V2.",
 
     # --- Lang ---
     "lang.current": "Current language: {current_lang}",
@@ -455,6 +462,8 @@ EN_STRINGS: dict[str, str] = {
     "integrity.recover": "Run 'fokiz init' to recover or reinitialize.",
 
     # --- Errors ---
+    "error.config_missing_timezone": "Timezone is missing from the configuration file.",
+    "error.config_invalid_timezone": "Invalid timezone '{tz}' in configuration. Use an IANA identifier (e.g. America/New_York).",
     "error.not_initialized": "Fokiz is not initialized. Run 'fokiz init'.",
     "error.already_initialized": "Fokiz is already initialized.",
     "error.active_contract": "There is already an active contract.",
@@ -507,6 +516,7 @@ EN_STRINGS: dict[str, str] = {
         "  fokiz status --complete     View completed tasks\n"
         "  fokiz status --banner       View status with banner\n"
         "  fokiz board                 View task board (In-progress / Completed)\n"
+        "  fokiz migrate               Migrate V1 contracts to V2 HMAC signatures\n"
         "  fokiz lang [es|en]          Change interface language\n"
         "  fokiz done <task_id>        Complete the active phase of a task\n"
         "  fokiz surrender <task_id>   Surrender a task\n"

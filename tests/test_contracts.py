@@ -242,7 +242,7 @@ class TestI_ContractValidation(unittest.TestCase):
             build_contract('Valid Title', 'Valid objective long enough', 9, 9, [{'title': f'P{i}', 'instructions': f'Do {i}', 'days': 1} for i in range(1, 10)])
 
     def test_min_phases_is_1(self):
-        contract = build_contract('Valid Title', 'Valid objective long enough', 5, 1, [{'title': 'Only Phase', 'instructions': 'Complete everything', 'days': 5}])
+        contract = build_contract('Valid Title', 'Valid objective long enough', 5, 1, [{'title': 'Only Phase', 'instructions': 'Complete everything', 'days': 5}], user_timezone='America/Mexico_City')
         self.assertEqual(len(contract.phases), 1)
 
     def test_phase_count_mismatch(self):

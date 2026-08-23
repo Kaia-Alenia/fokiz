@@ -138,11 +138,9 @@ def _prompt_iana_timezone() -> str:
     Keeps asking until the user provides a string accepted by ZoneInfo.
     Returns the validated IANA string.
     """
-    from ..constants import DEFAULT_TIMEZONE
     while True:
         tz_input = ui.prompt(
-            _("init.timezone_prompt"),
-            default=DEFAULT_TIMEZONE,
+            _("init.timezone_prompt")
         )
         try:
             ZoneInfo(tz_input)

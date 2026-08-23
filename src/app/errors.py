@@ -18,6 +18,11 @@ class FokizError(Exception):
             self.code = code
 
 
+class ConfigurationError(FokizError):
+    """Raised on configuration errors (e.g. invalid timezone)."""
+    code = "CONFIG_ERROR"
+
+
 # ---------------------------------------------------------------------------
 # Integrity errors
 # ---------------------------------------------------------------------------

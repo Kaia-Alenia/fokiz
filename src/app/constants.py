@@ -100,7 +100,7 @@ LOG_TOKENS_OVERLAP_MIN: int = 1        # at least 1 token from instructions
 # HMAC
 # ---------------------------------------------------------------------------
 
-HMAC_VERSION: str = "1"
+HMAC_VERSION: str = "2"
 SECRET_SIZE_BYTES: int = 32
 
 # ---------------------------------------------------------------------------
@@ -109,14 +109,6 @@ SECRET_SIZE_BYTES: int = 32
 
 BANNER_WIDTH: int = 60
 PROGRESS_BAR_WIDTH: int = 30
-
-# ---------------------------------------------------------------------------
-# Timezone default and validation
-# ---------------------------------------------------------------------------
-
-# Default IANA timezone identifier used when none is configured.
-# Must be a valid IANA tz name accepted by zoneinfo.ZoneInfo().
-DEFAULT_TIMEZONE: str = "America/Mexico_City"
 
 # ---------------------------------------------------------------------------
 # File permissions

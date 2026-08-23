@@ -185,12 +185,17 @@ def decide_dispatches(
     from .db import get_user_config
     user_config = get_user_config()
     nickname = user_config["nickname"] if user_config and "nickname" in user_config.keys() else "Usuario"
-    tz_str = user_config["timezone"] if user_config and "timezone" in user_config.keys() else "GMT-6"
-    import re
-    from datetime import timedelta
-    m = re.match(r"^(?:GMT|UTC)([+-]\d+)$", tz_str.upper())
-    offset_h = int(m.group(1)) if m else 0
-    local_time = now + timedelta(hours=offset_h)
+    from .errors import ConfigurationError
+    if not user_config or "timezone" not in user_config:
+        raise ConfigurationError("Scheduler cannot run: explicit timezone is required.")
+    tz_str = user_config["timezone"]
+    
+    import zoneinfo
+    try:
+        zone = zoneinfo.ZoneInfo(tz_str)
+    except zoneinfo.ZoneInfoNotFoundError:
+        raise ConfigurationError(f"Scheduler cannot run: invalid timezone '{tz_str}'.")
+    local_time = now.astimezone(zone)
     local_hour = local_time.hour
 
     # Presence check (skip if not active and not wakeup burst)
