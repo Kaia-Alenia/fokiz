@@ -170,6 +170,9 @@ def cmd_add() -> int:
             "title": ph.title,
             "instructions": ph.instructions,
             "target_deadline": ph.target_deadline,
+            "status": "PENDING",
+            "completed_at": None,
+            "completion_log": None,
         }
         for ph in contract.phases
     ]
@@ -188,7 +191,10 @@ def cmd_add() -> int:
         total_phases=contract.total_phases,
         created_at=contract.created_at,
         deadline=contract.deadline,
-        phases=contract_to_phase_dicts(contract),
+        status="ACTIVE",
+        completed_at=None,
+        surrender_reason=None,
+        phases=phase_dicts,
     )
     try:
         integrity_hash = compute_hmac(payload)
