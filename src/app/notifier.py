@@ -28,6 +28,8 @@ def _run_silent(args: list[str], timeout: int = 10) -> bool:
             capture_output=True,
             timeout=timeout,
         )
+        if result.returncode != 0:
+            log.warning("Command %s failed (code %d): %s", args[0], result.returncode, result.stderr.decode(errors='replace'))
         return result.returncode == 0
     except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
         log.debug("Command failed %s: %s", args[0], exc)
@@ -69,7 +71,7 @@ def send_notification(
     """
     args = [
         "notify-send",
-        "--urgency", "critical",
+        "--urgency", urgency,
         "--app-name", app_name,
         "--expire-time", str(timeout_ms),
     ]

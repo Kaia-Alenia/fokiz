@@ -187,7 +187,7 @@ def decide_dispatches(
     user_config = get_user_config()
     nickname = user_config["nickname"] if user_config and "nickname" in user_config.keys() else i18n._("scheduler.default_nickname")
     from .errors import ConfigurationError
-    if not user_config or "timezone" not in user_config:
+    if not user_config or "timezone" not in user_config.keys():
         raise ConfigurationError(i18n._("error.scheduler_missing_timezone"))
     tz_str = user_config["timezone"]
     
