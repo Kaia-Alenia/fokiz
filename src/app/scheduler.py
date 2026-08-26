@@ -185,6 +185,12 @@ def decide_dispatches(
 
     from .db import get_user_config
     user_config = get_user_config()
+    try:
+        from .config import load_config
+        conf = load_config()
+        i18n.set_language(conf.get("language", "en"))
+    except Exception:
+        pass
     nickname = user_config["nickname"] if user_config and "nickname" in user_config.keys() else i18n._("scheduler.default_nickname")
     from .errors import ConfigurationError
     if not user_config or "timezone" not in user_config.keys():

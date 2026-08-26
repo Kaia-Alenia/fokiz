@@ -76,6 +76,14 @@ def _save_prev_idle(idle_s: float | None) -> None:
 def run() -> None:
     now = datetime.now(timezone.utc)
 
+    # ---- Internationalization ----
+    try:
+        from app.config import load_config
+        conf = load_config()
+        i18n.set_language(conf.get("language", "en"))
+    except Exception:
+        pass
+
     # ---- Sanity checks ----
     if not DB_PATH.exists():
         log.warning("data.db not found. Skipping monitor tick.")

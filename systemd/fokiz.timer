@@ -3,8 +3,7 @@ Description=Fokiz — Episodic Timer (60s)
 After=graphical-session.target
 
 [Timer]
-OnBootSec=60s
-OnUnitActiveSec=60s
+OnCalendar=*:*
 Persistent=true
 AccuracySec=10s
 

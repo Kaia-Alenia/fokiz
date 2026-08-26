@@ -30,8 +30,7 @@ TIMER_TEMPLATE = dedent("""\
     After=graphical-session.target
 
     [Timer]
-    OnBootSec=60s
-    OnUnitActiveSec=60s
+    OnCalendar=*:*
     Persistent=true
     AccuracySec=10s
 
